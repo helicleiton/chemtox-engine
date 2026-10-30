@@ -550,7 +550,8 @@ function calcularSeveridade(sel, mix) {
 function avaliarCorrosividade(sel, mix) {
   const ext = Math.max(0, 7 - mix.pH, mix.pH - 7);
   const nominal = sel.some((s) => s.ph !== null && (s.ph < 2 || s.ph > 11));
-  const corrosivo = ext >= 3 || nominal;
+  // Só ácidos/bases fortes em pH extremo são cáusticos; ácidos fracos (aspirina, vinagre) não.
+  const corrosivo = mix.pH < 2.5 || mix.pH > 11.5 || nominal;
   let grau = null;
   if (corrosivo) {
     grau = ext >= 6 ? 'IIIb' : ext >= 5 ? 'IIIa' : ext >= 4 ? 'IIb' : ext >= 3 ? 'IIa' : 'I';
