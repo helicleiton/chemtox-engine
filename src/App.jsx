@@ -4,70 +4,99 @@ import {
   FileText, Plus, RefreshCw, Printer, Filter, Clock, Info, Search, X
 } from 'lucide-react';
 
-// ptoxicidade e reatividade: "aquoso" indica se a substância contém água (padrão: sim)
+// Modelo: "conc" é a concentração (mol/L) do reagente puro no frasco. Cada substância
+// contribui com volume V/n na mistura. "acido"/"base" descrevem o comportamento ácido-base:
+// forte (totalmente dissociado, com n equivalentes) ou fraco (pKa/pKb).
+// "absorcao" = constantes ilustrativas (ka/ke em 1/h) para a curva plasmática.
 const SUBSTANCIAS = [
   // Ácidos
   { id: 'h2so4', nome: 'Ácido Sulfúrico', formula: 'H₂SO₄', categoria: 'Ácidos', ph: 0.5, cor: '#ef4444', tipo: 'acid',
+    conc: 1.0, acido: { forte: true, n: 2 },
     descricao: 'Ácido mineral forte, corrosivo e desidratante. Causa queimaduras profundas e reage com exotermia.' },
   { id: 'hcl', nome: 'Ácido Clorídrico (Muriático)', formula: 'HCl', categoria: 'Ácidos', ph: 0.8, cor: '#f87171', tipo: 'acid',
+    conc: 1.0, acido: { forte: true, n: 1 }, volatil: true,
     descricao: 'Ácido mineral forte usado em limpeza de pisos. Libera vapores irritantes e corrói tecidos.' },
   { id: 'hno3', nome: 'Ácido Nítrico', formula: 'HNO₃', categoria: 'Ácidos', ph: 1.0, cor: '#facc15', tipo: 'acid',
+    conc: 1.0, acido: { forte: true, n: 1 }, volatil: true,
     descricao: 'Ácido forte e oxidante. Causa queimaduras químicas e libera vapores nitrosos tóxicos.' },
   { id: 'vinagre', nome: 'Vinagre (Ácido Acético 5%)', formula: 'CH₃COOH', categoria: 'Ácidos', ph: 2.5, cor: '#fde68a', tipo: 'acid',
+    conc: 0.8, acido: { pKa: 4.76, n: 1 },
     descricao: 'Ácido fraco de uso culinário. Em concentração doméstica causa irritação leve.' },
   { id: 'citrico', nome: 'Ácido Cítrico', formula: 'C₆H₈O₇', categoria: 'Ácidos', ph: 2.4, cor: '#fef08a', tipo: 'acid',
+    conc: 0.05, acido: { pKa: 3.13, n: 1 },
     descricao: 'Ácido orgânico fraco presente em frutas cítricas e usado como acidulante alimentar.' },
 
   // Bases
   { id: 'naoh', nome: 'Soda Cáustica (Hidróxido de Sódio)', formula: 'NaOH', categoria: 'Bases', ph: 13.5, cor: '#3b82f6', tipo: 'base',
+    conc: 1.0, base: { forte: true, n: 1, sal: true },
     descricao: 'Base forte e corrosiva. Saponifica tecidos e gera calor ao se dissolver em água.' },
   { id: 'amonia', nome: 'Amônia Doméstica', formula: 'NH₃', categoria: 'Bases', ph: 11.3, cor: '#60a5fa', tipo: 'base',
+    conc: 0.5, base: { pKb: 4.75, n: 1, sal: false }, volatil: true,
     descricao: 'Base volátil de limpeza. Vapores irritam olhos e vias respiratórias.' },
   { id: 'bicarbonato', nome: 'Bicarbonato de Sódio', formula: 'NaHCO₃', categoria: 'Bases', ph: 8.3, cor: '#e0f2fe', tipo: 'base',
-    descricao: 'Base fraca usada como fermento e antiácido. Praticamente inofensivo em uso doméstico.' },
+    conc: 0.5, base: { pKb: 7.65, n: 1, sal: true },
+    descricao: 'Base fraca usada como fermento e antiácido. Com ácidos libera gás carbônico (CO₂).' },
   { id: 'cal', nome: 'Hidróxido de Cálcio (Cal Hidratada)', formula: 'Ca(OH)₂', categoria: 'Bases', ph: 12.4, cor: '#e2e8f0', tipo: 'base',
+    conc: 0.02, base: { forte: true, n: 2, sal: true },
     descricao: 'Base pouco solúvel usada em construção. Pó e suspensão causam queimaduras nos olhos e pele.' },
 
   // Produtos domésticos
   { id: 'bleach', nome: 'Água Sanitária (Hipoclorito de Sódio)', formula: 'NaClO', categoria: 'Produtos Domésticos', ph: 11.5, cor: '#eab308', tipo: 'household', oxidante: true,
+    conc: 0.5, base: { pKb: 6.5, n: 1, sal: true },
     descricao: 'Desinfetante oxidante. Nunca misturar com ácidos ou amônia: libera gases tóxicos.' },
   { id: 'detergente', nome: 'Detergente Neutro', formula: 'LAS (surfactante)', categoria: 'Produtos Domésticos', ph: 7.0, cor: '#86efac', tipo: 'surfactant', detergente: true,
+    conc: 0,
     descricao: 'Surfactante de uso doméstico. Baixa toxicidade, mas causa irritação ocular.' },
   { id: 'desentupidor', nome: 'Desentupidor Enzimático', formula: 'Enzimas + NaOH', categoria: 'Produtos Domésticos', ph: 9.0, cor: '#a3e635', tipo: 'household',
+    conc: 0.05, base: { forte: true, n: 1, sal: true },
     descricao: 'Mistura de enzimas e agentes alcalinos. Irritante para pele e olhos.' },
   { id: 'h2o2', nome: 'Água Oxigenada 10 volumes', formula: 'H₂O₂', categoria: 'Produtos Domésticos', ph: 4.5, cor: '#f0fdfa', tipo: 'peroxide', peroxido: true,
+    conc: 0.3, acido: { pKa: 4.5, n: 1 },
     descricao: 'Agente oxidante de baixa concentração. Decompõe-se liberando oxigênio, o que pode formar espuma.' },
   { id: 'sabao', nome: 'Sabão Líquido', formula: 'RCOONa', categoria: 'Produtos Domésticos', ph: 10.0, cor: '#f9a8d4', tipo: 'soap',
+    conc: 0.05, base: { pKb: 5.5, n: 1, sal: true },
     descricao: 'Sal alcalino de ácido graxo, usado na limpeza.' },
   { id: 'oleo', nome: 'Óleo Vegetal', formula: 'C₃H₅(OOCR)₃', categoria: 'Produtos Domésticos', ph: 7.0, cor: '#fcd34d', tipo: 'oil', aquoso: false,
+    conc: 0,
     descricao: 'Triglicerídeos de origem vegetal, base da saponificação.' },
 
   // Medicamentos
   { id: 'paracetamol', nome: 'Paracetamol', formula: 'C₈H₉NO₂', categoria: 'Medicamentos', ph: 6.0, cor: '#a855f7', tipo: 'pharma',
+    conc: 0.01, acido: { pKa: 9.5, n: 1 }, absorcao: { ka: 1.5, ke: 0.35 },
     descricao: 'Analgésico e antitérmico. Em excesso, causa lesão hepática, agravada pelo álcool.' },
   { id: 'aspirina', nome: 'Ácido Acetilsalicílico (Aspirina)', formula: 'C₉H₈O₄', categoria: 'Medicamentos', ph: 3.0, cor: '#c4b5fd', tipo: 'pharma',
+    conc: 0.01, acido: { pKa: 3.5, n: 1 }, absorcao: { ka: 2.0, ke: 0.4 },
     descricao: 'Anti-inflamatório e antiagregante. Em excesso, causa irritação gástrica e acidose.' },
   { id: 'ibuprofeno', nome: 'Ibuprofeno', formula: 'C₁₃H₁₈O₂', categoria: 'Medicamentos', ph: 4.5, cor: '#ddd6fe', tipo: 'pharma',
+    conc: 0.01, acido: { pKa: 4.4, n: 1 }, absorcao: { ka: 1.8, ke: 0.3 },
     descricao: 'Anti-inflamatório não esteroide. Em excesso, pode irritar a mucosa gástrica.' },
   { id: 'codeina', nome: 'Xarope com Codeína', formula: 'C₁₈H₂₁NO₃', categoria: 'Medicamentos', ph: 5.5, cor: '#8b5cf6', tipo: 'pharma', opioide: true,
+    conc: 0.01, base: { pKb: 6.1, n: 1, sal: false }, absorcao: { ka: 1.2, ke: 0.25 },
     descricao: 'Antitussígeno opioide. Potencializa a depressão do SNC e respiratória quando combinado com álcool.' },
 
   // Solventes e orgânicos
   { id: 'alcohol', nome: 'Álcool Etílico 70%', formula: 'C₂H₅OH', categoria: 'Solventes', ph: 7.0, cor: '#06b6d4', tipo: 'solvent',
+    conc: 0, absorcao: { ka: 2.0, ke: 0.15 },
     descricao: 'Solvente inflamável e depressor do SNC.' },
   { id: 'acetona', nome: 'Acetona', formula: 'C₃H₆O', categoria: 'Solventes', ph: 7.0, cor: '#67e8f9', tipo: 'solvent', aquoso: false,
+    conc: 0,
     descricao: 'Solvente volátil e altamente inflamável. Vapores causam tontura e irritação das vias aéreas.' },
   { id: 'gasolina', nome: 'Gasolina (Hidrocarbonetos)', formula: 'C₄–C₁₂', categoria: 'Solventes', ph: 7.0, cor: '#fb923c', tipo: 'solvent', aquoso: false,
+    conc: 0,
     descricao: 'Mistura de hidrocarbonetos inflamável. Aspiração pode causar pneumonia química.' },
   { id: 'metanol', nome: 'Metanol', formula: 'CH₃OH', categoria: 'Solventes', ph: 7.0, cor: '#22d3ee', tipo: 'solvent', metanol: true,
+    conc: 0, absorcao: { ka: 1.0, ke: 0.1 },
     descricao: 'Álcool tóxico. Metabolizado em produtos que causam acidose metabólica e danos ao nervo óptico.' },
 
   // Sais e metais
   { id: 'nacl', nome: 'Cloreto de Sódio (Sal de Cozinha)', formula: 'NaCl', categoria: 'Sais & Metais', ph: 7.0, cor: '#e2e8f0', tipo: 'salt',
+    conc: 0,
     descricao: 'Sal neutro de uso alimentício.' },
-  { id: 'cuso4', nome: 'Sulfato de Cobre', formula: 'CuSO₄', categoria: 'Sais & Metais', ph: 4.5, cor: '#2563eb', tipo: 'salt',
+  { id: 'cuso4', nome: 'Sulfato de Cobre', formula: 'CuSO₄', categoria: 'Sais & Metais', ph: 4.5, cor: '#2563eb', tipo: 'salt', cobre: true,
+    conc: 0.1, acido: { pKa: 7.5, n: 1 },
     descricao: 'Sal azul tóxico se ingerido. Irrita pele e olhos e causa danos ao fígado e rins em excesso.' },
   { id: 'sodio', nome: 'Sódio Metálico', formula: 'Na', categoria: 'Sais & Metais', ph: null, cor: '#94a3b8', tipo: 'metal', aquoso: false,
+    conc: 0,
     descricao: 'Metal alcalino extremamente reativo com água e umidade. Uso exclusivo em laboratório, com EPI.' }
 ];
 
@@ -110,6 +139,14 @@ const CORES = {
   rosa: '#fb7185'
 };
 
+// Constantes físico-químicas
+const KW = 1e-14;
+const R_ATM = 0.082057;        // L·atm/(mol·K)
+const KSP_CU_OH2 = 2.2e-20;    // produto de solubilidade do Cu(OH)₂
+const CP_AGUA = 4.18;          // J/(g·K)
+const SODIO_MOL = 0.0435;      // amostra fixa de 1 g de sódio metálico
+const VOL_ESTOMAGO_L = 1.0;    // volume gástrico estimado para pressão do gás
+
 // Paradas da escala de pH usadas para colorir a solução
 const PARADAS_PH = [
   [0, '#ef4444'],
@@ -151,6 +188,14 @@ const ROTULOS_ORGAOS = [
   { id: 'coracao', texto: 'Coração', lado: 'direita', y: 110, px: 88, py: 108 },
   { id: 'estomago', texto: 'Estômago', lado: 'direita', y: 160, px: 122, py: 150 },
   { id: 'figado', texto: 'Fígado / Rins', lado: 'esquerda', y: 170, px: 80, py: 168 }
+];
+
+const ABAS = [
+  { id: 'lab', nome: 'Laboratório', icone: FlaskConical, dica: 'Simulação do béquer e dos cálculos da reação' },
+  { id: 'body', nome: 'Fisiologia', icone: Activity, dica: 'Órgãos afetados e curva plasmática' },
+  { id: 'exames', nome: 'Exames', icone: FileText, dica: 'Laudos simulados de gasometria, hemograma e função renal e hepática' },
+  { id: 'firstaid', nome: 'Primeiros Socorros', icone: ShieldAlert, dica: 'Condutas de emergência e janelas de antídotos' },
+  { id: 'report', nome: 'Relatório', icone: FileText, dica: 'Dossiê técnico da simulação' }
 ];
 
 const estilos = {
@@ -301,72 +346,197 @@ function corDaSolucao(sel, ph) {
   return `rgb(${mistura.join(', ')})`;
 }
 
-// Detecta o cenário da mistura. "gravidade": 0 = fatal, 1 = alto, 2 = moderado
-function analisarReacao(sel) {
-  const tem = (pred) => sel.some(pred);
-  const acido = tem((s) => s.ph !== null && s.ph < 4);
-  const base = tem((s) => s.ph !== null && s.ph > 10 && !s.oxidante);
-  const oxidante = tem((s) => s.oxidante);
-  const amonia = tem((s) => s.id === 'amonia');
-  const sodio = tem((s) => s.id === 'sodio');
-  const aquosoComSodio = tem((s) => s.id !== 'sodio' && s.aquoso !== false);
-  const peroxido = tem((s) => s.peroxido);
-  const detergente = tem((s) => s.detergente);
-  const sabao = tem((s) => s.tipo === 'soap');
-  const oleo = tem((s) => s.tipo === 'oil');
+// Calcula a mistura: pH por balanço de cargas (pKa/pKb), reações com estequiometria,
+// calor liberado (ΔH), variação de temperatura (ΔT = Q / m·c) e gases produzidos (n).
+function calcularMistura(sel, volumeMl) {
+  const Vl = Math.max(volumeMl, 1) / 1000;
+  const Vi = sel.length ? Vl / sel.length : 0;
 
-  if (sodio && aquosoComSodio) {
-    return {
-      tipo: 'hidrogenio', titulo: 'Reação explosiva com água', deltaT: 60, gravidade: 0, bolhas: true, gas: 'rgba(226, 232, 240, 0.4)',
-      equacao: '2Na + 2H₂O → 2NaOH + H₂↑ (Explosão e liberação de Hidrogênio)'
-    };
+  const molPorId = {};
+  let acidoForteEq = 0;
+  let baseForteEq = 0;
+  const acidosFracos = [];
+  const basesNeutras = [];
+  const basesSal = [];
+
+  sel.forEach((s) => {
+    const mol = (s.conc || 0) * Vi;
+    molPorId[s.id] = mol;
+    if (mol <= 0) return;
+    if (s.acido) {
+      if (s.acido.forte) acidoForteEq += mol * s.acido.n;
+      else acidosFracos.push({ C: mol / Vl, Ka: 10 ** -s.acido.pKa });
+    }
+    if (s.base) {
+      if (s.base.forte) baseForteEq += mol * s.base.n;
+      else {
+        const KaBH = 10 ** (s.base.pKb - 14);
+        if (s.base.sal) basesSal.push({ C: mol / Vl, KaBH });
+        else basesNeutras.push({ C: mol / Vl, KaBH });
+      }
+    }
+  });
+
+  const Ca = acidoForteEq / Vl;   // ânions de ácido forte
+  const Cb = baseForteEq / Vl;    // cátions de base forte (Na⁺, Ca²⁺...)
+  const cationsConst = Cb + basesSal.reduce((acc, b) => acc + b.C, 0);
+
+  // Balanço de cargas: h + cátions = OH⁻ + ânions. Crescente em [H⁺], resolvido por bisseção em pH.
+  const f = (h) =>
+    h - KW / h +
+    cationsConst +
+    basesNeutras.reduce((acc, b) => acc + (b.C * h) / (h + b.KaBH), 0) -
+    Ca -
+    acidosFracos.reduce((acc, a) => acc + (a.C * a.Ka) / (a.Ka + h), 0) -
+    basesSal.reduce((acc, b) => acc + (b.C * b.KaBH) / (h + b.KaBH), 0);
+
+  let lo = 0;
+  let hi = 14;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    if (f(10 ** -mid) > 0) lo = mid;
+    else hi = mid;
   }
-  if (oxidante && acido) {
-    return {
-      tipo: 'cloro', titulo: 'Liberação de gás cloro', deltaT: 30, gravidade: 0, bolhas: true, gas: 'rgba(190, 242, 100, 0.55)',
-      equacao: 'NaClO + H⁺ → HClO ⇌ Cl₂↑ + H₂O (Gás Cloro Tóxico)'
-    };
+  const pH = (lo + hi) / 2;
+
+  const m = (id) => molPorId[id] || 0;
+  const acidoFracoMol = acidosFracos.reduce((acc, a) => acc + a.C * Vl, 0);
+  const acidoTotal = acidoForteEq + acidoFracoMol;
+  const acidoVolatil = sel.some((s) => s.volatil && s.acido && s.acido.forte);
+  const temAmonia = m('amonia') > 0;
+
+  const reacoes = [];
+
+  // Sódio metálico: com água é explosivo; sem água, apenas reativo
+  const temSodio = sel.some((s) => s.id === 'sodio');
+  const sodioComAgua = sel.some((s) => s.id !== 'sodio' && s.aquoso !== false);
+  if (temSodio && sodioComAgua) {
+    reacoes.push({
+      tipo: 'hidrogenio', titulo: 'Reação explosiva com água', fumaca: true, bolhas: true, gravidade: 0,
+      equacao: '2Na + 2H₂O → 2NaOH + H₂↑ (Explosão e liberação de Hidrogênio)',
+      deltaH: -184 * SODIO_MOL, gas: { nome: 'H₂', mol: SODIO_MOL / 2, cor: 'rgba(226, 232, 240, 0.45)' }
+    });
+  } else if (temSodio) {
+    reacoes.push({
+      tipo: 'metal', titulo: 'Metal reativo', fumaca: false, bolhas: false, gravidade: 1,
+      equacao: 'Na + H₂O → NaOH + ½H₂↑ (reage com a umidade do ar e da pele)', deltaH: 0, gas: null
+    });
   }
-  if (oxidante && amonia) {
-    return {
-      tipo: 'cloramina', titulo: 'Formação de cloraminas', deltaT: 25, gravidade: 0, bolhas: true, gas: 'rgba(217, 249, 157, 0.5)',
-      equacao: 'NH₃ + HOCl → NH₂Cl (Cloraminas, gás sufocante) + H₂O'
-    };
+
+  // Cloro: hipoclorito + ácido. Consome hipoclorito antes da cloramina.
+  const nBleach = m('bleach');
+  let nBleachLivre = nBleach;
+  if (nBleach > 0 && acidoTotal > 0) {
+    const x = Math.min(nBleach, acidoTotal);
+    nBleachLivre -= x;
+    reacoes.push({
+      tipo: 'cloro', titulo: 'Liberação de gás cloro', fumaca: true, bolhas: true, gravidade: 0,
+      equacao: 'NaClO + H⁺ → HClO ⇌ Cl₂↑ + H₂O (Gás Cloro Tóxico)',
+      deltaH: -90 * x, gas: { nome: 'Cl₂', mol: 0.5 * x, cor: 'rgba(190, 242, 100, 0.55)' }
+    });
   }
-  if (acido && base) {
-    return {
-      tipo: 'neutralizacao', titulo: 'Neutralização ácido-base', deltaT: 45, gravidade: tem((s) => s.ph !== null && s.ph < 2) ? 0 : 1,
-      bolhas: true, gas: 'rgba(226, 232, 240, 0.5)',
-      equacao: 'H⁺ + OH⁻ → H₂O + Calor (Neutralização Violenta)'
-    };
+
+  // Cloraminas: hipoclorito + amônia
+  if (nBleachLivre > 0 && m('amonia') > 0) {
+    const x = Math.min(nBleachLivre, m('amonia'));
+    reacoes.push({
+      tipo: 'cloramina', titulo: 'Formação de cloraminas', fumaca: true, bolhas: true, gravidade: 0,
+      equacao: 'NH₃ + HOCl → NH₂Cl (Cloraminas, gás sufocante) + H₂O',
+      deltaH: -50 * x, gas: { nome: 'NH₂Cl', mol: x, cor: 'rgba(217, 249, 157, 0.5)' }
+    });
   }
-  if (peroxido && detergente) {
-    return {
-      tipo: 'oxigenio', titulo: 'Efervescência de oxigênio', deltaT: 8, gravidade: 1, bolhas: true, gas: null,
-      equacao: '2H₂O₂ → 2H₂O + O₂↑ (decomposição catalisada, com espuma)'
-    };
+
+  // Neutralização forte-forte
+  const xNeut = Math.min(acidoForteEq, baseForteEq);
+  if (xNeut > 0) {
+    const gravidadeNeut = sel.some((s) => s.ph !== null && s.ph < 2) ? 0 : 1;
+    reacoes.push({
+      tipo: 'neutralizacao', titulo: 'Neutralização ácido-base', fumaca: false, bolhas: true, gravidade: gravidadeNeut,
+      equacao: 'H⁺ + OH⁻ → H₂O + Calor (Neutralização Violenta)',
+      deltaH: -57.3 * xNeut, gas: null
+    });
   }
-  if (sodio) {
-    return {
-      tipo: 'metal', titulo: 'Metal reativo', deltaT: 4, gravidade: 1, bolhas: false, gas: null,
-      equacao: 'Na + H₂O → NaOH + ½H₂↑ (reage com umidade)'
-    };
+
+  // Ácido volátil + amônia: cloreto de amônio (fumaça branca)
+  if (acidoVolatil && temAmonia) {
+    const x = Math.min(acidoForteEq, m('amonia'));
+    reacoes.push({
+      tipo: 'nh4cl', titulo: 'Fumaça branca de cloreto de amônio', fumaca: true, bolhas: false, gravidade: 1,
+      equacao: 'NH₃ + HCl → NH₄Cl (fumaça branca)',
+      deltaH: -52 * x, gas: { nome: 'NH₄Cl', mol: 0, cor: 'rgba(255, 255, 255, 0.75)' }
+    });
   }
-  if (sabao && oleo) {
-    return {
-      tipo: 'saponificacao', titulo: 'Saponificação', deltaT: 6, gravidade: 2, bolhas: false, gas: null,
-      equacao: 'Óleo (triglicerídeo) + Base → Sabão + Glicerol (Saponificação)'
-    };
+
+  // Bicarbonato + ácido: CO₂ (absorve calor)
+  if (m('bicarbonato') > 0 && acidoTotal > 0) {
+    const x = Math.min(m('bicarbonato'), acidoTotal);
+    reacoes.push({
+      tipo: 'co2', titulo: 'Efervescência de CO₂', fumaca: false, bolhas: true, gravidade: 2,
+      equacao: 'NaHCO₃ + H⁺ → Na⁺ + H₂O + CO₂↑',
+      deltaH: 9 * x, gas: { nome: 'CO₂', mol: x, cor: null }
+    });
   }
-  return { tipo: 'nenhuma', titulo: 'Sem reação direta', deltaT: 2, gravidade: 2, bolhas: false, gas: null, equacao: 'Mistura em Solução Aquosa / Sem Reação Direta' };
+
+  // Peróxido + detergente: decomposição catalisada, com espuma de oxigênio
+  if (m('h2o2') > 0 && sel.some((s) => s.detergente)) {
+    const x = m('h2o2');
+    reacoes.push({
+      tipo: 'oxigenio', titulo: 'Efervescência de oxigênio', fumaca: false, bolhas: true, gravidade: 1,
+      equacao: '2H₂O₂ → 2H₂O + O₂↑ (decomposição catalisada, com espuma)',
+      deltaH: -98 * x, gas: { nome: 'O₂', mol: x / 2, cor: null }
+    });
+  }
+
+  // Sabão + óleo: saponificação (sem liberação significativa de calor no modelo)
+  if (sel.some((s) => s.tipo === 'soap') && sel.some((s) => s.tipo === 'oil')) {
+    reacoes.push({
+      tipo: 'saponificacao', titulo: 'Saponificação', fumaca: false, bolhas: false, gravidade: 2,
+      equacao: 'Óleo (triglicerídeo) + Base → Sabão + Glicerol (Saponificação)', deltaH: 0, gas: null
+    });
+  }
+
+  const primariaBase = reacoes.length
+    ? [...reacoes].sort((a, b) => a.gravidade - b.gravidade)[0]
+    : {
+        tipo: 'nenhuma', titulo: 'Sem reação direta', fumaca: false, bolhas: false, gravidade: 2,
+        equacao: 'Mistura em Solução Aquosa / Sem Reação Direta', deltaH: 0, gas: null
+      };
+
+  const dH = reacoes.reduce((acc, r) => acc + r.deltaH, 0);             // kJ
+  // ΔH < 0 é exotérmico: o calor liberado (−ΔH) aquece a solução. Massa ≈ volume (g).
+  const dT = volumeMl > 0 ? (-dH * 1000) / (volumeMl * CP_AGUA) : 0;
+  const tFinal = 25 + dT;
+  const gasMol = reacoes.reduce((acc, r) => acc + (r.gas ? r.gas.mol : 0), 0);
+
+  // Precipitação de Cu(OH)₂: Q = [Cu²⁺]·[OH⁻]² comparado ao Ksp
+  const nCu = m('cuso4');
+  const h = 10 ** -pH;
+  const oh = KW / h;
+  const cuConc = nCu / Vl;
+  const Q = cuConc * oh * oh;
+  const precipFracao = nCu > 0 && Q > KSP_CU_OH2 ? Math.min(1, Math.log10(Q / KSP_CU_OH2) / 3) : 0;
+
+  return {
+    pH,
+    Ca,
+    Cb,
+    acidoTotal,
+    reacoes,
+    primaria: { ...primariaBase, deltaT: dT, cor: primariaBase.gas ? primariaBase.gas.cor : null },
+    dH,
+    dT,
+    tFinal,
+    gasMol,
+    precip: { fracao: precipFracao, Q, ksp: KSP_CU_OH2 }
+  };
 }
 
-function calcularSeveridade(sel, reacao) {
+function calcularSeveridade(sel, mix) {
   if (sel.length === 0) {
     return { nivel: 'SEM MISTURA', cor: '#475569', tempo: 'Sem risco imediato', indice: -1 };
   }
-  const porPH = sel.some((s) => s.ph !== null && (s.ph < 3 || s.ph > 11)) ? 1 : 2;
-  const indice = Math.min(reacao.gravidade, porPH);
+  const porNominal = sel.some((s) => s.ph !== null && (s.ph < 3 || s.ph > 11)) || mix.pH < 2.5 || mix.pH > 11.5;
+  const indice = Math.min(mix.primaria.gravidade, porNominal ? 1 : 2);
   if (indice === 0) {
     return { nivel: 'FATAL / CRÍTICO', cor: '#dc2626', tempo: 'Crítico: primeiros 15 minutos', indice };
   }
@@ -376,13 +546,28 @@ function calcularSeveridade(sel, reacao) {
   return { nivel: 'MODERADO / BAIXO', cor: '#ca8a04', tempo: 'Observação: até 4 horas', indice };
 }
 
+// Corrosividade pela escala de Zargar (ingestão de cáusticos), pelo pH da mistura
+function avaliarCorrosividade(sel, mix) {
+  const ext = Math.max(0, 7 - mix.pH, mix.pH - 7);
+  const nominal = sel.some((s) => s.ph !== null && (s.ph < 2 || s.ph > 11));
+  const corrosivo = ext >= 3 || nominal;
+  let grau = null;
+  if (corrosivo) {
+    grau = ext >= 6 ? 'IIIb' : ext >= 5 ? 'IIIa' : ext >= 4 ? 'IIb' : ext >= 3 ? 'IIa' : 'I';
+  }
+  const perfuracao = { IIIb: 40, IIIa: 20, IIb: 5, IIa: 1, I: 0 }[grau] || 0;
+  const edemaBase = { IIIb: 60, IIIa: 40, IIb: 20, IIa: 8, I: 2 }[grau] || 0;
+  return { corrosivo, grau, perfuracao, edemaBase };
+}
+
 // Nível de dano de cada órgão: 0 = sem risco, 1 = atenção, 2 = crítico
-function avaliarOrgaos(sel, reacao, severidade) {
-  const t = reacao.tipo;
-  const gasTox = t === 'cloro' || t === 'cloramina';
-  const reagiu = ['cloro', 'cloramina', 'neutralizacao', 'hidrogenio'].includes(t);
-  const corrosivo = sel.some((s) => s.ph !== null && (s.ph < 2 || s.ph > 11));
-  const extremo = sel.some((s) => s.ph !== null && (s.ph < 4 || s.ph > 9));
+function avaliarOrgaos(sel, mix, sev) {
+  const tipos = mix.reacoes.map((r) => r.tipo);
+  const tem = (t) => tipos.includes(t);
+  const gasTox = tem('cloro') || tem('cloramina');
+  const reagiu = ['cloro', 'cloramina', 'neutralizacao', 'hidrogenio', 'co2', 'nh4cl'].some(tem);
+  const corr = avaliarCorrosividade(sel, mix);
+  const extremo = sel.some((s) => s.ph !== null && (s.ph < 4 || s.ph > 9)) || mix.pH < 4 || mix.pH > 9;
   const paracetamol = sel.some((s) => s.id === 'paracetamol');
   const alcool = sel.some((s) => s.id === 'alcohol');
   const opioide = sel.some((s) => s.opioide);
@@ -406,14 +591,14 @@ function avaliarOrgaos(sel, reacao, severidade) {
     {
       id: 'boca',
       nome: 'Boca / Esôfago',
-      nivel: corrosivo || gasTox || t === 'hidrogenio' ? 2 : extremo || t === 'oxigenio' ? 1 : 0,
-      causa: corrosivo ? 'Agente corrosivo ácido ou base' : gasTox ? 'Vapores tóxicos' : t === 'hidrogenio' ? 'Projeção de álcali' : 'Contato com pH extremo'
+      nivel: corr.corrosivo || gasTox || tem('hidrogenio') ? 2 : extremo || tem('oxigenio') ? 1 : 0,
+      causa: corr.corrosivo ? 'Agente corrosivo ácido ou base' : gasTox ? 'Vapores tóxicos' : tem('hidrogenio') ? 'Projeção de álcali' : 'Contato com pH extremo'
     },
     {
       id: 'estomago',
       nome: 'Estômago',
-      nivel: reagiu || corrosivo ? 2 : extremo || t === 'oxigenio' ? 1 : 0,
-      causa: reagiu ? 'Reação exotérmica ou gasosa no trato digestivo' : t === 'oxigenio' ? 'Espuma de oxigênio e distensão' : 'Contato com pH extremo'
+      nivel: reagiu || corr.corrosivo ? 2 : extremo || tem('oxigenio') ? 1 : 0,
+      causa: reagiu ? 'Reação exotérmica ou gasosa no trato digestivo' : tem('oxigenio') ? 'Espuma de oxigênio e distensão' : 'Contato com pH extremo'
     },
     {
       id: 'figado',
@@ -426,10 +611,120 @@ function avaliarOrgaos(sel, reacao, severidade) {
     {
       id: 'coracao',
       nome: 'Coração',
-      nivel: Math.max(severidade.indice === 0 ? 2 : severidade.indice === 1 ? 1 : 0, metanol ? 1 : 0),
-      causa: severidade.indice === 0 ? 'Choque e acidose ou alcalose severa' : 'Distúrbio do equilíbrio ácido-base'
+      nivel: Math.max(sev.indice === 0 ? 2 : sev.indice === 1 ? 1 : 0, metanol ? 1 : 0),
+      causa: sev.indice === 0 ? 'Choque e acidose ou alcalose severa' : 'Distúrbio do equilíbrio ácido-base'
     }
   ];
+}
+
+// Indicadores clínicos simulados, derivados da mistura e dos órgãos
+function calcularMetricas(sel, mix, sev, organos) {
+  const corr = avaliarCorrosividade(sel, mix);
+  const tipos = mix.reacoes.map((r) => r.tipo);
+  const gasTox = tipos.includes('cloro') || tipos.includes('cloramina');
+  const alcool = sel.some((s) => s.id === 'alcohol');
+  const opioide = sel.some((s) => s.opioide);
+  const metanol = sel.some((s) => s.metanol);
+  const nivelF = organos.find((o) => o.id === 'figado').nivel;
+
+  const broncoespasmo = gasTox ? Math.round(30 + 65 * (1 - Math.exp(-mix.gasMol / 0.01))) : 0;
+  const edemaGlote = Math.min(95, corr.edemaBase + (gasTox ? 15 : 0));
+
+  // Hepático e renal (ilustrativos)
+  const alt = 25 + (nivelF === 2 ? 1500 : nivelF === 1 ? 60 : 0);
+  const ast = Math.round(alt * 1.3) + 5;
+  const gsh = nivelF === 2 ? 15 : nivelF === 1 ? 60 : 100;
+  const inr = (1.0 + (nivelF === 2 ? 0.6 : nivelF === 1 ? 0.1 : 0)).toFixed(2);
+  const tfg = 100 - (nivelF === 2 ? 50 : nivelF === 1 ? 10 : 0) - (metanol ? 15 : 0);
+  const creat = (0.9 * (100 / tfg)).toFixed(1);
+  const ureia = Math.round(30 + (100 - tfg) * 0.8);
+
+  // Gasometria: acidemia ou alcalemia proporcional à gravidade
+  const fac = sev.indice === 0 ? 1 : sev.indice === 1 ? 0.5 : sev.indice === 2 ? 0.2 : 0;
+  const direcao = mix.pH < 7 ? -1 : mix.pH > 7 ? 1 : 0;
+  let delta = direcao * 0.12 * fac;
+  if (metanol) delta -= 0.08;
+  if (opioide && alcool) delta -= 0.05;
+  const phSangue = +(7.4 + delta).toFixed(2);
+  const hco3 = Math.max(4, Math.round(24 + 60 * (phSangue - 7.4)));
+  const pco2 = 40 + (opioide && alcool ? 15 : 0) + (gasTox ? 5 : 0);
+  const ag = 12 + (metanol ? 16 : 0) + (phSangue < 7.35 && !metanol ? 4 : 0);
+
+  return {
+    corrosivo: corr.corrosivo,
+    grauZargar: corr.grau,
+    perfuracao: corr.perfuracao,
+    broncoespasmo,
+    edemaGlote,
+    alt,
+    ast,
+    gsh,
+    inr,
+    tfg,
+    creat,
+    ureia,
+    phSangue,
+    hco3,
+    pco2,
+    ag,
+    leucocitos: 7000 + (corr.corrosivo ? 4000 : 0),
+    hb: (14.0 - (gasTox ? 0.4 : 0)).toFixed(1),
+    plaquetas: 250000
+  };
+}
+
+// Antídotos e condutas com janela de tempo (minutos após a exposição)
+function listarAntidotos(sel, metricas, mix) {
+  const lista = [];
+  const tipos = mix.reacoes.map((r) => r.tipo);
+  if (sel.some((s) => s.id === 'paracetamol')) {
+    lista.push({ nome: 'N-acetilcisteína (NAC)', motivo: 'Paracetamol', janelaMin: 480, nota: 'Mais eficaz nas primeiras 8 h após a exposição.' });
+  }
+  if (sel.some((s) => s.opioide)) {
+    lista.push({ nome: 'Naloxona', motivo: 'Opioide (codeína)', janelaMin: 10, nota: 'Efeito em minutos. Monitorar a respiração continuamente.' });
+  }
+  if (sel.some((s) => s.metanol)) {
+    lista.push({ nome: 'Fomepizol', motivo: 'Metanol', janelaMin: 480, nota: 'Quanto antes, melhor. Idealmente nas primeiras 8 h.' });
+  }
+  if (metricas.corrosivo) {
+    lista.push({ nome: 'Endoscopia digestiva alta', motivo: 'Corrosivo (sem antídoto específico)', janelaMin: 720, nota: 'Realizar precocemente, em até 12 a 24 h.' });
+  }
+  if (tipos.includes('cloro') || tipos.includes('cloramina')) {
+    lista.push({ nome: 'Oxigênio e suporte ventilatório', motivo: 'Gás tóxico', janelaMin: 0, nota: 'Sem janela: tratar imediatamente.' });
+  }
+  return lista;
+}
+
+// Curva plasmática ilustrativa (Bateman), normalizada pelo pico; não depende de dose
+function curvasPlasma(sel) {
+  return sel
+    .filter((s) => s.absorcao)
+    .map((s) => {
+      const { ka, ke } = s.absorcao;
+      const tmax = Math.log(ka / ke) / (ka - ke);
+      const pontos = [];
+      for (let i = 0; i <= 60; i++) {
+        const t = (i * 8) / 60;
+        pontos.push((ka / (ka - ke)) * (Math.exp(-ke * t) - Math.exp(-ka * t)));
+      }
+      const pico = Math.max(...pontos);
+      return { id: s.id, nome: s.nome, cor: s.cor, tmax, pontos: pontos.map((v) => v / pico) };
+    });
+}
+
+function flag(valor, min, max) {
+  const v = Number(valor);
+  if (v < min) return '↓';
+  if (v > max) return '↑';
+  return '';
+}
+
+function formatarTempo(segundos) {
+  const s = Math.max(0, Math.floor(segundos));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  return `${h}h ${String(m).padStart(2, '0')}m ${String(ss).padStart(2, '0')}s`;
 }
 
 function carregarPersonalizadas() {
@@ -459,9 +754,9 @@ function useLargura() {
   return largura;
 }
 
-function Becher({ volume, cor, reacao }) {
+function Becher({ volume, cor, reacao, precipFracao }) {
   const alturaLiquido = Math.min((volume / 1000) * 100, 90);
-  const temFumaca = reacao.deltaT > 15 && reacao.gas;
+  const temFumaca = reacao.cor && (reacao.deltaT > 15 || reacao.fumaca);
 
   const bolhas = [
     { left: '12%', d: 5, dur: 1.8, atraso: 0 },
@@ -480,7 +775,7 @@ function Becher({ volume, cor, reacao }) {
 
   return (
     <div style={{ position: 'relative', width: 150, height: 200 }}>
-      {/* Fumaça / vapor acima do béquer quando ΔT > 15 °C */}
+      {/* Fumaça / vapor acima do béquer */}
       {temFumaca && vapores.map((v, i) => (
         <span
           key={i}
@@ -491,7 +786,7 @@ function Becher({ volume, cor, reacao }) {
             width: v.d,
             height: v.d,
             borderRadius: '50%',
-            background: reacao.gas,
+            background: reacao.cor,
             filter: 'blur(6px)',
             animation: `fumaca ${v.dur}s ease-out infinite`,
             animationDelay: `${v.atraso}s`
@@ -542,6 +837,20 @@ function Becher({ volume, cor, reacao }) {
             />
           ))}
         </div>
+
+        {/* Precipitado no fundo (Cu(OH)₂) */}
+        {precipFracao > 0 && (
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: `${precipFracao * 30}%`,
+            background: 'repeating-radial-gradient(circle at 30% 40%, #93c5fd 0 2px, #60a5fa 2px 4px)',
+            opacity: 0.85,
+            transition: 'height 0.8s ease'
+          }} />
+        )}
       </div>
 
       {/* Graduação */}
@@ -604,8 +913,8 @@ function Termometro({ temperatura, delta, percentual }) {
         }} />
       </div>
       <Thermometer size={16} color={CORES.amarelo} style={{ marginTop: 14 }} />
-      <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700 }}>{temperatura}°C</span>
-      <span style={{ fontSize: 11, color: CORES.amarelo }}>+{delta}°C</span>
+      <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700 }}>{temperatura.toFixed(1)}°C</span>
+      <span style={{ fontSize: 11, color: delta < 0 ? CORES.azul : CORES.amarelo }}>{delta >= 0 ? '+' : ''}{delta.toFixed(1)}°C</span>
     </div>
   );
 }
@@ -756,6 +1065,84 @@ function CorpoHumano({ organos, foco, onSelecionar }) {
   );
 }
 
+// Curvas de concentração plasmática vs. tempo (0 a 8 h), normalizadas pelo pico
+function GraficoPlasma({ curvas }) {
+  const L = 40;
+  const W = 340;
+  const T = 20;
+  const H = 150;
+  const x = (t) => L + (t / 8) * W;
+  const y = (c) => T + H - c * H;
+
+  if (curvas.length === 0) {
+    return <p style={{ margin: 0, fontSize: 12, color: CORES.textoSutil }}>Nenhuma substância absorvível na mistura atual.</p>;
+  }
+
+  return (
+    <svg viewBox="0 0 400 200" width="100%" role="img" aria-label="Curva de concentração plasmática">
+      <line x1={L} y1={T + H} x2={L + W} y2={T + H} stroke="#475569" />
+      <line x1={L} y1={T} x2={L} y2={T + H} stroke="#475569" />
+      {[0, 2, 4, 6, 8].map((h) => (
+        <text key={h} x={x(h)} y={T + H + 14} fontSize="10" textAnchor="middle" fill="#94a3b8">{h}h</text>
+      ))}
+      <text x={6} y={T + 4} fontSize="9" fill="#94a3b8">100%</text>
+      {curvas.map((c) => {
+        const d = c.pontos.map((v, i) => `${i === 0 ? 'M' : 'L'} ${x((i * 8) / 60).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+        return (
+          <g key={c.id}>
+            <path d={d} fill="none" stroke={c.cor} strokeWidth="2.5" />
+            <line x1={x(c.tmax)} y1={y(1)} x2={x(c.tmax)} y2={T + H} stroke={c.cor} strokeDasharray="3 3" opacity="0.6" />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function CartaoMetrica({ titulo, linhas }) {
+  return (
+    <div style={{ background: 'rgba(30, 41, 59, 0.5)', border: `1px solid ${CORES.bordaForte}`, borderRadius: 12, padding: 14 }}>
+      <p style={{ ...estilos.rotulo, marginBottom: 10 }}>{titulo}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {linhas.map((l) => (
+          <div key={l.rotulo} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
+            <span style={{ color: CORES.textoSecundario }}>{l.rotulo}</span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 700, color: l.cor || CORES.texto }}>{l.valor}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TabelaExames({ titulo, linhas }) {
+  return (
+    <div style={estilos.cartao}>
+      <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700 }}>{titulo}</h3>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <thead>
+          <tr style={{ color: CORES.textoSecundario, textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <th style={{ padding: '6px 4px', fontWeight: 700 }}>Exame</th>
+            <th style={{ padding: '6px 4px', fontWeight: 700 }}>Resultado</th>
+            <th style={{ padding: '6px 4px', fontWeight: 700 }}>Referência</th>
+          </tr>
+        </thead>
+        <tbody>
+          {linhas.map((l) => (
+            <tr key={l.nome} style={{ borderTop: `1px solid ${CORES.borda}` }}>
+              <td style={{ padding: '8px 4px' }}>{l.nome}</td>
+              <td style={{ padding: '8px 4px', fontFamily: 'monospace', fontWeight: 700, color: l.seta ? CORES.laranja : CORES.texto }}>
+                {l.valor} {l.unidade} {l.seta}
+              </td>
+              <td style={{ padding: '8px 4px', fontFamily: 'monospace', color: CORES.textoSutil }}>{l.ref}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function Botao({ onClick, cor, children, className }) {
   return (
     <button onClick={onClick} className={className} style={{ ...estilos.botao, background: cor }}>
@@ -771,12 +1158,17 @@ export default function App() {
   const [personalizadas, setPersonalizadas] = useState(carregarPersonalizadas);
   const catalogo = useMemo(() => [...SUBSTANCIAS, ...personalizadas], [personalizadas]);
 
-  const [selecionadas, setSelecionadas] = useState([SUBSTANCIAS[0], SUBSTANCIAS[2]]);
+  const [selecionadas, setSelecionadas] = useState(() => [
+    SUBSTANCIAS.find((s) => s.id === 'h2so4'),
+    SUBSTANCIAS.find((s) => s.id === 'naoh')
+  ]);
   const [volume, setVolume] = useState(250);
   const [abaAtiva, setAbaAtiva] = useState('lab');
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState(null);
   const [orgaoSelecionado, setOrgaoSelecionado] = useState(null);
+  const [inicioExposicao, setInicioExposicao] = useState(null);
+  const [agora, setAgora] = useState(() => Date.now());
 
   const [novaSubstancia, setNovaSubstancia] = useState({
     nome: '', formula: '', categoria: 'Produtos Domésticos', ph: 7, cor: '#10b981', descricao: ''
@@ -785,6 +1177,13 @@ export default function App() {
   useEffect(() => {
     salvarPersonalizadas(personalizadas);
   }, [personalizadas]);
+
+  // Contagem regressiva das janelas de antídoto
+  useEffect(() => {
+    if (inicioExposicao === null) return undefined;
+    const id = setInterval(() => setAgora(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [inicioExposicao]);
 
   const adicionarSubstancia = (subst) => {
     if (selecionadas.length < 3 && !selecionadas.find((s) => s.id === subst.id)) {
@@ -804,6 +1203,12 @@ export default function App() {
     e.preventDefault();
     if (!novaSubstancia.nome.trim()) return;
     const phValor = Math.min(Math.max(parseFloat(novaSubstancia.ph) || 7, 0), 14);
+    // Substância personalizada: comportamento aproximado pelo pH informado
+    const modelo = phValor < 6
+      ? { conc: 10 ** -phValor, acido: { forte: true, n: 1 } }
+      : phValor > 8
+      ? { conc: 10 ** (phValor - 14), base: { forte: true, n: 1, sal: true } }
+      : { conc: 0 };
     const criada = {
       nome: novaSubstancia.nome.trim(),
       formula: novaSubstancia.formula.trim() || '—',
@@ -813,43 +1218,36 @@ export default function App() {
       id: `custom_${Date.now()}`,
       tipo: 'custom',
       ph: phValor,
-      personalizada: true
+      personalizada: true,
+      ...modelo
     };
     setPersonalizadas([...personalizadas, criada]);
     setNovaSubstancia({ nome: '', formula: '', categoria: 'Produtos Domésticos', ph: 7, cor: '#10b981', descricao: '' });
   };
 
-  // Cálculos da mistura (substâncias sem pH, como o sódio metálico, ficam fora da média)
-  const phs = selecionadas.filter((s) => s.ph !== null).map((s) => s.ph);
-  const phNumero = phs.length > 0 ? phs.reduce((acc, p) => acc + p, 0) / phs.length : 7;
-  const phMedio = phNumero.toFixed(1);
-
-  const reacao = analisarReacao(selecionadas);
-  const deltaTemp = reacao.deltaT;
-  const temperaturaFinal = 25 + deltaTemp;
-  const nivelTermometro = Math.min(Math.max(((temperaturaFinal - 20) / 60) * 100, 8), 100);
-
-  const severidade = calcularSeveridade(selecionadas, reacao);
-  const corSolucao = corDaSolucao(selecionadas, phNumero);
-  const organos = avaliarOrgaos(selecionadas, reacao, severidade);
+  // Cálculos
+  const mix = useMemo(() => calcularMistura(selecionadas, volume), [selecionadas, volume]);
+  const severidade = calcularSeveridade(selecionadas, mix);
+  const corSolucao = corDaSolucao(selecionadas, mix.pH);
+  const organos = avaliarOrgaos(selecionadas, mix, severidade);
+  const metricas = calcularMetricas(selecionadas, mix, severidade, organos);
+  const antidotos = listarAntidotos(selecionadas, metricas, mix);
+  const curvas = curvasPlasma(selecionadas);
 
   const orgaoFoco = organos.find((o) => o.id === orgaoSelecionado)
     || [...organos].sort((a, b) => b.nivel - a.nivel)[0];
   const detalheFoco = orgaoFoco.nivel > 0 ? DETALHES_ORGAOS[orgaoFoco.id][orgaoFoco.nivel] : null;
   const orgaosEmRisco = organos.filter((o) => o.nivel > 0);
 
+  const nivelTermometro = Math.min(Math.max(((mix.tFinal - 20) / 60) * 100, 8), 100);
+  const pressaoGastrica = (mix.gasMol * R_ATM * (273.15 + mix.tFinal)) / VOL_ESTOMAGO_L;
+  const riscoGas = pressaoGastrica > 3 ? 'Risco de ruptura gástrica' : pressaoGastrica > 1 ? 'Distensão gástrica' : 'Sem distensão relevante';
+
   // Busca e filtro do catálogo
   const termo = normalizar(busca.trim());
   const casaBusca = (s) => !termo || normalizar(s.nome).includes(termo) || normalizar(s.formula).includes(termo);
   const encontradas = catalogo.filter((s) => casaBusca(s) && (!filtroCategoria || s.categoria === filtroCategoria));
   const contagemPorFiltro = (valor) => catalogo.filter((s) => casaBusca(s) && (!valor || s.categoria === valor)).length;
-
-  const abas = [
-    { id: 'lab', nome: 'Laboratório', icone: FlaskConical, dica: 'Simulação do béquer e das reações' },
-    { id: 'body', nome: 'Fisiologia', icone: Activity, dica: 'Órgãos afetados pela mistura atual' },
-    { id: 'firstaid', nome: 'Primeiros Socorros', icone: ShieldAlert, dica: 'Condutas de emergência' },
-    { id: 'report', nome: 'Relatório', icone: FileText, dica: 'Dossiê técnico da simulação' }
-  ];
 
   const cartaoSubstancia = (subst) => {
     const selecionada = selecionadas.some((s) => s.id === subst.id);
@@ -899,6 +1297,29 @@ export default function App() {
     );
   };
 
+  const linhasGasometria = [
+    { nome: 'pH arterial', valor: metricas.phSangue.toFixed(2), unidade: '', ref: '7,35 – 7,45', seta: flag(metricas.phSangue, 7.35, 7.45) },
+    { nome: 'PaCO₂', valor: metricas.pco2, unidade: 'mmHg', ref: '35 – 45', seta: flag(metricas.pco2, 35, 45) },
+    { nome: 'HCO₃⁻', valor: metricas.hco3, unidade: 'mEq/L', ref: '22 – 26', seta: flag(metricas.hco3, 22, 26) },
+    { nome: 'Ânion gap', valor: metricas.ag, unidade: 'mEq/L', ref: '8 – 16', seta: flag(metricas.ag, 8, 16) }
+  ];
+  const linhasHemograma = [
+    { nome: 'Leucócitos', valor: metricas.leucocitos.toLocaleString('pt-BR'), unidade: '/mm³', ref: '4.000 – 11.000', seta: flag(metricas.leucocitos, 4000, 11000) },
+    { nome: 'Hemoglobina', valor: metricas.hb, unidade: 'g/dL', ref: '13,5 – 17,5', seta: flag(metricas.hb, 13.5, 17.5) },
+    { nome: 'Plaquetas', valor: metricas.plaquetas.toLocaleString('pt-BR'), unidade: '/mm³', ref: '150.000 – 450.000', seta: flag(metricas.plaquetas, 150000, 450000) }
+  ];
+  const linhasRenal = [
+    { nome: 'TFG', valor: metricas.tfg, unidade: 'mL/min/1,73m²', ref: '≥ 90', seta: flag(metricas.tfg, 90, 200) },
+    { nome: 'Creatinina', valor: metricas.creat, unidade: 'mg/dL', ref: '0,6 – 1,3', seta: flag(metricas.creat, 0.6, 1.3) },
+    { nome: 'Ureia', valor: metricas.ureia, unidade: 'mg/dL', ref: '15 – 40', seta: flag(metricas.ureia, 15, 40) }
+  ];
+  const linhasHepatico = [
+    { nome: 'TGP (ALT)', valor: metricas.alt, unidade: 'U/L', ref: '7 – 56', seta: flag(metricas.alt, 7, 56) },
+    { nome: 'TGO (AST)', valor: metricas.ast, unidade: 'U/L', ref: '10 – 40', seta: flag(metricas.ast, 10, 40) },
+    { nome: 'Glutationa reduzida (GSH)', valor: metricas.gsh, unidade: '% do normal', ref: '≥ 80', seta: flag(metricas.gsh, 80, 200) },
+    { nome: 'INR', valor: metricas.inr, unidade: '', ref: '0,8 – 1,2', seta: flag(metricas.inr, 0.8, 1.2) }
+  ];
+
   return (
     <div style={estilos.pagina}>
       <style>{KEYFRAMES}</style>
@@ -926,7 +1347,7 @@ export default function App() {
           </div>
 
           <nav style={{ display: 'flex', gap: 4, background: CORES.superficieAlt, padding: 4, borderRadius: 12, flexWrap: 'wrap' }}>
-            {abas.map((aba) => {
+            {ABAS.map((aba) => {
               const Icone = aba.icone;
               const ativa = abaAtiva === aba.id;
               return (
@@ -968,7 +1389,7 @@ export default function App() {
         alignItems: 'start'
       }}>
 
-        {/* Coluna esquerda: mistura, atalhos e catálogo */}
+        {/* Coluna esquerda: mistura, atalhos, catálogo e cadastro */}
         <aside style={{ display: 'flex', flexDirection: 'column', gap: 20 }} className="no-print">
 
           {/* Mistura atual */}
@@ -1258,32 +1679,48 @@ export default function App() {
                   border: `1px solid ${CORES.borda}`
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                    <Becher volume={volume} cor={corSolucao} reacao={reacao} />
+                    <Becher volume={volume} cor={corSolucao} reacao={mix.primaria} precipFracao={mix.precip.fracao} />
                     <p style={{ margin: 0, fontSize: 12, fontFamily: 'monospace', color: CORES.textoSecundario }}>
                       Béquer Graduado ({volume} ml)
                     </p>
                   </div>
 
-                  <Termometro temperatura={temperaturaFinal} delta={deltaTemp} percentual={nivelTermometro} />
+                  <Termometro temperatura={mix.tFinal} delta={mix.dT} percentual={nivelTermometro} />
                 </div>
 
-                {/* Indicadores, tempo útil e equação */}
+                {/* Cálculos, tempo útil e equação */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ background: 'rgba(30, 41, 59, 0.6)', border: `1px solid ${CORES.bordaForte}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: CORES.textoSecundario }}>Temperatura</span>
-                      <span style={{ fontSize: 14, fontFamily: 'monospace', fontWeight: 700 }}>{temperaturaFinal}°C (+{deltaTemp}°C)</span>
+                  <div style={{ background: 'rgba(30, 41, 59, 0.6)', border: `1px solid ${CORES.bordaForte}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: CORES.textoSecundario }}>pH calculado (pKa/pKb)</span>
+                      <span style={{ fontSize: 14, fontFamily: 'monospace', fontWeight: 700, color: CORES.cyan }}>{mix.pH.toFixed(2)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: CORES.textoSecundario }}>pH resultante estimado</span>
-                      <span style={{ fontSize: 14, fontFamily: 'monospace', fontWeight: 700, color: CORES.cyan }}>{phMedio}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: CORES.textoSecundario }}>Calor da reação (ΔH)</span>
+                      <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700 }}>{mix.dH.toFixed(1)} kJ</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12, color: CORES.textoSecundario }}>Reação</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: deltaTemp > 15 ? CORES.laranja : CORES.texto, textAlign: 'right' }}>
-                        {reacao.titulo}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: CORES.textoSecundario }}>Temperatura final</span>
+                      <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: mix.dT > 15 ? CORES.laranja : CORES.texto }}>
+                        {mix.tFinal.toFixed(1)}°C ({mix.dT >= 0 ? '+' : ''}{mix.dT.toFixed(1)})
                       </span>
                     </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: CORES.textoSecundario }}>Gás produzido</span>
+                      <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700 }}>{mix.gasMol.toFixed(4)} mol</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: CORES.textoSecundario }}>Pressão em estômago de 1 L (PV = nRT)</span>
+                      <span style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: pressaoGastrica > 1 ? CORES.laranja : CORES.texto }}>
+                        {pressaoGastrica.toFixed(2)} atm
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 12, color: pressaoGastrica > 1 ? CORES.laranja : CORES.textoSutil }}>{riscoGas}</p>
+                    {mix.precip.fracao > 0 && (
+                      <p style={{ margin: 0, fontSize: 12, color: '#93c5fd' }}>
+                        Precipitado de Cu(OH)₂ formado (Q = {mix.precip.Q.toExponential(1)} &gt; Ksp = {mix.precip.ksp.toExponential(1)})
+                      </p>
+                    )}
 
                     {/* Escala de pH */}
                     <div>
@@ -1291,7 +1728,7 @@ export default function App() {
                         <div style={{
                           position: 'absolute',
                           top: -4,
-                          left: `calc(${(phNumero / 14) * 100}% - 6px)`,
+                          left: `calc(${(mix.pH / 14) * 100}% - 6px)`,
                           width: 12,
                           height: 18,
                           borderRadius: 4,
@@ -1316,26 +1753,40 @@ export default function App() {
                     padding: 16,
                     boxShadow: `0 0 20px ${CORES.cyan}22`
                   }}>
-                    <p style={{ ...estilos.rotulo, color: CORES.cyan, marginBottom: 8 }}>Equação química resultante</p>
-                    <p style={{ margin: 0, fontFamily: 'monospace', fontSize: 14, lineHeight: 1.5, color: CORES.texto }}>
-                      {reacao.equacao}
+                    <p style={{ ...estilos.rotulo, color: CORES.cyan, marginBottom: 8 }}>
+                      Equação química · {mix.primaria.titulo}
                     </p>
+                    <p style={{ margin: 0, fontFamily: 'monospace', fontSize: 14, lineHeight: 1.5, color: CORES.texto }}>
+                      {mix.primaria.equacao}
+                    </p>
+                    {mix.reacoes.length > 1 && (
+                      <p style={{ margin: '10px 0 0', fontSize: 11, color: CORES.textoSutil }}>
+                        Outras reações: {mix.reacoes.slice(1).map((r) => r.titulo).join('; ')}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
+
+              <p style={{ margin: '16px 0 0', fontSize: 11, color: CORES.textoSutil }}>
+                pH por balanço de cargas com pKa/pKb; ΔH com valores de tabela aproximados; ΔT = Q/(m·c) com m ≈ volume e c = 4,18 J/(g·K).
+                Modelo didático: não considera todas as espécies nem a cinética da reação.
+              </p>
             </div>
           )}
 
           {/* ABA 2: FISIOLOGIA HUMANA */}
           {abaAtiva === 'body' && (
-            <div style={estilos.cartao}>
-              <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Activity size={20} color={CORES.rosa} />
-                Degradação Fisiológica e Progressão Toxicológica
-              </h2>
-              <p style={{ margin: '0 0 20px', fontSize: 12, color: CORES.textoSecundario }}>
-                Clique em um órgão para ver os danos e o tempo estimado de complicação. Os órgãos em risco piscam.
-              </p>
+            <div style={{ ...estilos.cartao, display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div>
+                <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Activity size={20} color={CORES.rosa} />
+                  Degradação Fisiológica e Progressão Toxicológica
+                </h2>
+                <p style={{ margin: 0, fontSize: 12, color: CORES.textoSecundario }}>
+                  Clique em um órgão para ver os danos e o tempo estimado de complicação. Os órgãos em risco piscam.
+                </p>
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: ehDesktop ? '1fr 1fr' : '1fr', gap: 24, alignItems: 'start' }}>
 
@@ -1425,10 +1876,66 @@ export default function App() {
                   )}
                 </div>
               </div>
+
+              {/* Toxicodinâmica das vias aéreas e do estômago */}
+              <div style={{ display: 'grid', gridTemplateColumns: ehDesktop ? '1fr 1fr' : '1fr', gap: 12 }}>
+                <CartaoMetrica
+                  titulo="Vias aéreas e glote"
+                  linhas={[
+                    { rotulo: 'Risco de broncoespasmo', valor: `${metricas.broncoespasmo}%`, cor: metricas.broncoespasmo > 50 ? CORES.laranja : undefined },
+                    { rotulo: 'Risco de edema de glote', valor: `${metricas.edemaGlote}%`, cor: metricas.edemaGlote > 30 ? CORES.laranja : undefined }
+                  ]}
+                />
+                <CartaoMetrica
+                  titulo="Esôfago e estômago (Zargar)"
+                  linhas={[
+                    { rotulo: 'Grau de lesão', valor: metricas.grauZargar || 'Sem lesão cáustica', cor: metricas.grauZargar ? CORES.laranja : undefined },
+                    { rotulo: 'Risco de perfuração', valor: `${metricas.perfuracao}%`, cor: metricas.perfuracao >= 20 ? CORES.vermelho : undefined }
+                  ]}
+                />
+              </div>
+
+              {/* Curva plasmática */}
+              <div>
+                <p style={{ ...estilos.rotulo, marginBottom: 8 }}>Concentração plasmática vs. tempo (ilustrativo)</p>
+                <div style={{ background: CORES.fundo, borderRadius: 12, border: `1px solid ${CORES.borda}`, padding: 12 }}>
+                  <GraficoPlasma curvas={curvas} />
+                  {curvas.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8, fontSize: 11, color: CORES.textoSecundario }}>
+                      {curvas.map((c) => (
+                        <span key={c.id}>
+                          <span style={{ color: c.cor, fontWeight: 700 }}>■</span> {c.nome}: T<sub>max</sub> ≈ {c.tmax.toFixed(1)} h, C<sub>max</sub> = pico (100%)
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p style={{ margin: '8px 0 0', fontSize: 11, color: CORES.textoSutil }}>
+                    Curvas de absorção e eliminação normalizadas pelo pico, com constantes ilustrativas. Não dependem da dose.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* ABA 3: PRIMEIROS SOCORROS */}
+          {/* ABA 3: EXAMES */}
+          {abaAtiva === 'exames' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={estilos.cartao}>
+                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Painel de exames simulados</h2>
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: CORES.textoSecundario }}>
+                  Valores ilustrativos calculados a partir da mistura atual. Não são laudos reais.
+                </p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: ehDesktop ? '1fr 1fr' : '1fr', gap: 16 }}>
+                <TabelaExames titulo="Gasometria arterial" linhas={linhasGasometria} />
+                <TabelaExames titulo="Hemograma" linhas={linhasHemograma} />
+                <TabelaExames titulo="Função renal" linhas={linhasRenal} />
+                <TabelaExames titulo="Função hepática" linhas={linhasHepatico} />
+              </div>
+            </div>
+          )}
+
+          {/* ABA 4: PRIMEIROS SOCORROS */}
           {abaAtiva === 'firstaid' && (
             <div style={{ ...estilos.cartao, display: 'flex', flexDirection: 'column', gap: 20 }}>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1452,6 +1959,61 @@ export default function App() {
                     <strong>NUNCA INDUZA O VÔMITO</strong> em ingestões de corrosivos (ácidos/bases fortes). O refluxo do agente corrosivo provoca queimadura dupla no esôfago e vias aéreas.
                   </p>
                 </div>
+              </div>
+
+              <div>
+                <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 600 }}>Janelas de antídoto e condutas</h3>
+                {antidotos.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: 13, color: CORES.textoSecundario }}>Nenhum antídoto específico para a mistura atual.</p>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                      {inicioExposicao === null ? (
+                        <Botao onClick={() => { setInicioExposicao(Date.now()); setAgora(Date.now()); }} cor={CORES.azul}>
+                          <Clock size={14} /> Registrar exposição agora
+                        </Botao>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: 13, color: CORES.textoSecundario }}>
+                            Tempo desde a exposição: <strong style={{ color: CORES.texto, fontFamily: 'monospace' }}>{formatarTempo((agora - inicioExposicao) / 1000)}</strong>
+                          </span>
+                          <button
+                            onClick={() => setInicioExposicao(null)}
+                            style={{ background: 'none', border: `1px solid ${CORES.bordaForte}`, color: CORES.textoSecundario, borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
+                          >
+                            Zerar contagem
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {antidotos.map((a) => {
+                        const decorridoMin = inicioExposicao === null ? 0 : (agora - inicioExposicao) / 60000;
+                        const restanteMin = a.janelaMin - decorridoMin;
+                        const expirada = inicioExposicao !== null && restanteMin <= 0 && a.janelaMin > 0;
+                        const cor = expirada ? CORES.textoSutil : restanteMin < 60 && inicioExposicao !== null ? CORES.vermelho : CORES.cyan;
+                        return (
+                          <div key={a.nome} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: 14, borderRadius: 10, background: CORES.superficieAlt, border: `1px solid ${CORES.bordaForte}` }}>
+                            <div>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 700 }}>{a.nome}</p>
+                              <p style={{ margin: '2px 0 0', fontSize: 11, color: CORES.textoSecundario }}>{a.motivo} • {a.nota}</p>
+                            </div>
+                            <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 800, color: cor, whiteSpace: 'nowrap' }}>
+                              {a.janelaMin === 0
+                                ? 'Imediato'
+                                : inicioExposicao === null
+                                ? `Janela: ${a.janelaMin >= 60 ? `${a.janelaMin / 60} h` : `${a.janelaMin} min`}`
+                                : expirada
+                                ? 'Janela expirada'
+                                : `Restam ${formatarTempo(restanteMin * 60)}`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div>
@@ -1487,7 +2049,7 @@ export default function App() {
             </div>
           )}
 
-          {/* ABA 4: RELATÓRIO CLÍNICO */}
+          {/* ABA 5: RELATÓRIO CLÍNICO */}
           {abaAtiva === 'report' && (
             <div style={{ ...estilos.cartao, display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, paddingBottom: 16, borderBottom: `1px solid ${CORES.borda}` }}>
@@ -1515,14 +2077,18 @@ export default function App() {
               }}>
                 <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[REAGENTES]:</strong> {selecionadas.map((s) => s.nome).join(' + ') || 'Nenhum'}</p>
                 <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[VOLUME TOTAL]:</strong> {volume} ml</p>
-                <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[pH RESULTANTE]:</strong> {phMedio}</p>
-                <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[REAÇÃO]:</strong> {reacao.titulo}</p>
+                <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[pH CALCULADO]:</strong> {mix.pH.toFixed(2)}</p>
+                <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[REAÇÃO]:</strong> {mix.primaria.titulo}</p>
+                <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[ΔH / ΔT]:</strong> {mix.dH.toFixed(1)} kJ / {mix.dT.toFixed(1)} °C</p>
+                <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[GÁS PRODUZIDO]:</strong> {mix.gasMol.toFixed(4)} mol (pressão estimada {pressaoGastrica.toFixed(2)} atm em 1 L)</p>
                 <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[AVALIAÇÃO DE RISCO]:</strong> {severidade.nivel}</p>
                 <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[TEMPO ÚTIL]:</strong> {severidade.tempo}</p>
                 <p style={{ margin: 0 }}>
                   <strong style={{ color: CORES.texto }}>[ÓRGÃOS EM RISCO]:</strong>{' '}
                   {orgaosEmRisco.length ? orgaosEmRisco.map((o) => `${o.nome} (${o.nivel === 2 ? 'crítico' : 'atenção'})`).join(', ') : 'Nenhum'}
                 </p>
+                <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[ZARGAR]:</strong> {metricas.grauZargar || 'Sem lesão cáustica'}</p>
+                <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[GASOMETRIA]:</strong> pH {metricas.phSangue.toFixed(2)}, HCO₃⁻ {metricas.hco3}, ânion gap {metricas.ag}</p>
                 <p style={{ margin: 0 }}><strong style={{ color: CORES.texto }}>[OBSERVAÇÕES CLÍNICAS]:</strong> Reação potencial severa em mucosas. Requer monitorização de pH sanguíneo e endoscopia digestiva alta precoce.</p>
               </div>
             </div>
