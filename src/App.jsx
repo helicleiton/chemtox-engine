@@ -231,6 +231,7 @@ const ROTULOS_ORGAOS = [
 const ABAS = [
   { id: 'lab', nome: 'Laboratório', icone: FlaskConical, dica: 'Simulação do béquer e dos cálculos da reação' },
   { id: 'body', nome: 'Fisiologia', icone: Activity, dica: 'Órgãos afetados e curva plasmática' },
+  { id: 'elementos', nome: 'Elementos', icone: FlaskConical, dica: 'Tabela periódica: combine elementos e veja a reação' },
   { id: 'exames', nome: 'Exames', icone: FileText, dica: 'Laudos simulados de gasometria, hemograma e função renal e hepática' },
   { id: 'firstaid', nome: 'Primeiros Socorros', icone: ShieldAlert, dica: 'Condutas de emergência e janelas de antídotos' },
   { id: 'report', nome: 'Relatório', icone: FileText, dica: 'Dossiê técnico da simulação' }
@@ -326,6 +327,18 @@ const KEYFRAMES = `
 @keyframes piscaAmarelo {
   0%, 100% { opacity: 1; filter: drop-shadow(0 0 0 #eab308); }
   50% { opacity: 0.5; filter: drop-shadow(0 0 8px #eab308); }
+}
+@keyframes faisca {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+@keyframes chamaTremula {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(0.92, 1.12); }
+}
+@keyframes brilho {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 button:focus-visible, select:focus-visible, input:focus-visible {
   outline: 2px solid #22d3ee;
@@ -784,6 +797,482 @@ function salvarPersonalizadas(lista) {
   }
 }
 
+// ─────────────── Tabela periódica: elementos e reações entre eles ───────────────
+
+const GRUPOS_ELEMENTOS = {
+  alcalino: { nome: 'Metais alcalinos', cor: '#f97316' },
+  alcalinoterroso: { nome: 'Metais alcalinoterrosos', cor: '#eab308' },
+  transicao: { nome: 'Metais de transição', cor: '#38bdf8' },
+  metalPos: { nome: 'Outros metais', cor: '#94a3b8' },
+  naoMetal: { nome: 'Não-metais', cor: '#22c55e' },
+  halogenio: { nome: 'Halogênios', cor: '#a3e635' },
+  nobre: { nome: 'Gases nobres', cor: '#a855f7' }
+};
+
+// Eletronegatividade de Pauling (null = sem valor relevante para gases nobres)
+const ELEMENTOS_TP = [
+  { s: 'H', nome: 'Hidrogênio', z: 1, m: 1.008, g: 'naoMetal', chi: 2.20, r: 1, c: 1 },
+  { s: 'He', nome: 'Hélio', z: 2, m: 4.003, g: 'nobre', chi: null, r: 1, c: 18 },
+  { s: 'Li', nome: 'Lítio', z: 3, m: 6.94, g: 'alcalino', chi: 0.98, r: 2, c: 1 },
+  { s: 'C', nome: 'Carbono', z: 6, m: 12.011, g: 'naoMetal', chi: 2.55, r: 2, c: 14 },
+  { s: 'N', nome: 'Nitrogênio', z: 7, m: 14.007, g: 'naoMetal', chi: 3.04, r: 2, c: 15 },
+  { s: 'O', nome: 'Oxigênio', z: 8, m: 15.999, g: 'naoMetal', chi: 3.44, r: 2, c: 16 },
+  { s: 'F', nome: 'Flúor', z: 9, m: 18.998, g: 'halogenio', chi: 3.98, r: 2, c: 17 },
+  { s: 'Ne', nome: 'Neônio', z: 10, m: 20.180, g: 'nobre', chi: null, r: 2, c: 18 },
+  { s: 'Na', nome: 'Sódio', z: 11, m: 22.990, g: 'alcalino', chi: 0.93, r: 3, c: 1 },
+  { s: 'Mg', nome: 'Magnésio', z: 12, m: 24.305, g: 'alcalinoterroso', chi: 1.31, r: 3, c: 2 },
+  { s: 'Al', nome: 'Alumínio', z: 13, m: 26.982, g: 'metalPos', chi: 1.61, r: 3, c: 13 },
+  { s: 'Si', nome: 'Silício', z: 14, m: 28.085, g: 'naoMetal', chi: 1.90, r: 3, c: 14 },
+  { s: 'P', nome: 'Fósforo', z: 15, m: 30.974, g: 'naoMetal', chi: 2.19, r: 3, c: 15 },
+  { s: 'S', nome: 'Enxofre', z: 16, m: 32.06, g: 'naoMetal', chi: 2.58, r: 3, c: 16 },
+  { s: 'Cl', nome: 'Cloro', z: 17, m: 35.45, g: 'halogenio', chi: 3.16, r: 3, c: 17 },
+  { s: 'Ar', nome: 'Argônio', z: 18, m: 39.948, g: 'nobre', chi: null, r: 3, c: 18 },
+  { s: 'K', nome: 'Potássio', z: 19, m: 39.098, g: 'alcalino', chi: 0.82, r: 4, c: 1 },
+  { s: 'Ca', nome: 'Cálcio', z: 20, m: 40.078, g: 'alcalinoterroso', chi: 1.00, r: 4, c: 2 },
+  { s: 'Fe', nome: 'Ferro', z: 26, m: 55.845, g: 'transicao', chi: 1.83, r: 4, c: 8 },
+  { s: 'Cu', nome: 'Cobre', z: 29, m: 63.546, g: 'transicao', chi: 1.90, r: 4, c: 11 },
+  { s: 'Zn', nome: 'Zinco', z: 30, m: 65.38, g: 'transicao', chi: 1.65, r: 4, c: 12 },
+  { s: 'Br', nome: 'Bromo', z: 35, m: 79.904, g: 'halogenio', chi: 2.96, r: 4, c: 17 },
+  { s: 'Ag', nome: 'Prata', z: 47, m: 107.87, g: 'transicao', chi: 1.93, r: 5, c: 11 },
+  { s: 'I', nome: 'Iodo', z: 53, m: 126.90, g: 'halogenio', chi: 2.66, r: 5, c: 17 },
+  { s: 'Au', nome: 'Ouro', z: 79, m: 196.97, g: 'transicao', chi: 2.54, r: 6, c: 11 },
+  { s: 'Hg', nome: 'Mercúrio', z: 80, m: 200.59, g: 'transicao', chi: 2.00, r: 6, c: 12 }
+];
+
+const COMPOSTOS_TP = [
+  { s: 'H2O', formula: 'H₂O', nome: 'Água' },
+  { s: 'HCl', formula: 'HCl', nome: 'Ácido clorídrico' }
+];
+
+const TIPO_LABEL = {
+  sintese: 'Síntese / adição',
+  deslocamento: 'Deslocamento simples',
+  explosiva: 'Reação explosiva / combustão violenta',
+  oxidacao: 'Formação de óxido / oxidação',
+  semreacao: 'Sem reação (série de reatividade)',
+  sem_reacao: 'Sem reação prevista',
+  inerte: 'Mistura inerte / sem reação'
+};
+
+const ESTADO_LABEL = { s: 'sólido', l: 'líquido', g: 'gás', aq: 'solução aquosa' };
+
+const GAS_COR = {
+  H2: 'rgba(226, 232, 240, 0.35)',
+  Cl2: 'rgba(190, 242, 100, 0.55)',
+  CO2: 'rgba(226, 232, 240, 0.4)',
+  SO2: 'rgba(226, 232, 240, 0.5)',
+  HCl: 'rgba(255, 255, 255, 0.7)'
+};
+
+const PRODUTOS_RISCO = {
+  'NaOH': 'Base cáustica: queima pele e olhos e reage violentamente com ácidos.',
+  'KOH': 'Base cáustica: queima pele e olhos.',
+  'LiOH': 'Base cáustica: irrita e queima tecidos.',
+  'Ca(OH)₂': 'Base irritante; o pó causa queimaduras nos olhos.',
+  'H₂': 'Gás inflamável e explosivo quando misturado ao ar; asfixiante em locais fechados.',
+  'H₂O': 'Sem risco relevante.',
+  'HCl': 'Gás e solução corrosivos; vapores irritam vias respiratórias.',
+  'NaCl': 'Sal de cozinha; baixo risco.',
+  'KCl': 'Sal; baixo risco em pequenas quantidades.',
+  'MgCl₂': 'Sal higroscópico; irritação leve.',
+  'CaCl₂': 'Sal higroscópico; irritação leve dos olhos.',
+  'AlCl₃': 'Corrosivo; hidrolisa e libera HCl.',
+  'ZnCl₂': 'Irritante para pele e olhos; tóxico se ingerido.',
+  'FeCl₂': 'Corrosivo e irritante.',
+  'FeCl₃': 'Corrosivo e irritante.',
+  'CuCl₂': 'Tóxico se ingerido; irritante.',
+  'Na₂O': 'Reage com água formando NaOH cáustico.',
+  'K₂O': 'Reage com água formando KOH cáustico.',
+  'Li₂O': 'Reage com água formando LiOH cáustico.',
+  'MgO': 'Pó irritante. A queima do magnésio produz luz intensa: não olhe diretamente.',
+  'Al₂O₃': 'Praticamente inerte; o pó pode irritar.',
+  'Fe₂O₃': 'Pouco tóxico (ferrugem).',
+  'CuO': 'Irritante se inalado.',
+  'FeS': 'Com ácidos libera H₂S, gás tóxico com odor de ovo podre.',
+  'CO₂': 'Asfixiante em ambientes fechados.',
+  'SO₂': 'Gás irritante e tóxico para as vias respiratórias.'
+};
+
+// Reações modeladas. "chaves" são os elementos/compostos necessários; "g" é a gravidade
+// (0 = fatal, 1 = alta, 2 = moderada). "dH" são valores de referência aproximados (kJ por equação).
+const REACOES_TP = [
+  { id: 'na_agua', tipo: 'explosiva', chaves: ['Na', 'H2O'], eq: '2Na(s) + 2H₂O(l) → 2NaOH(aq) + H₂(g)', dH: -368, g: 0, visual: 'faiscas', gas: 'H2', solido: null, aq: true, liga: ['Na', 'O'],
+    explica: 'O sódio tem baixa eletronegatividade (0,93) e perde facilmente seu elétron de valência. A água é reduzida a H₂, e o calor da reação pode inflamar o gás.' },
+  { id: 'k_agua', tipo: 'explosiva', chaves: ['K', 'H2O'], eq: '2K(s) + 2H₂O(l) → 2KOH(aq) + H₂(g)', dH: -393, g: 0, visual: 'faiscas', gas: 'H2', solido: null, aq: true, liga: ['K', 'O'],
+    explica: 'O potássio é ainda mais reativo que o sódio. O calor liberado inflama o H₂ quase imediatamente.' },
+  { id: 'li_agua', tipo: 'explosiva', chaves: ['Li', 'H2O'], eq: '2Li(s) + 2H₂O(l) → 2LiOH(aq) + H₂(g)', dH: -403, g: 1, visual: 'faiscas', gas: 'H2', solido: null, aq: true, liga: ['Li', 'O'],
+    explica: 'O lítio reage com a água de forma vigorosa, porém menos violenta que os outros alcalinos.' },
+  { id: 'ca_agua', tipo: 'deslocamento', chaves: ['Ca', 'H2O'], eq: 'Ca(s) + 2H₂O(l) → Ca(OH)₂(aq) + H₂(g)', dH: -414, g: 1, visual: null, gas: 'H2', solido: null, aq: true, liga: ['Ca', 'O'],
+    explica: 'O cálcio desloca o hidrogênio da água, formando hidróxido de cálcio e liberando H₂ em borbulhamento.' },
+  { id: 'h2_o2', tipo: 'explosiva', chaves: ['H', 'O'], eq: '2H₂(g) + O₂(g) → 2H₂O(l)', dH: -572, g: 0, visual: 'faiscas', gas: null, solido: null, aq: false, liga: ['H', 'O'],
+    explica: 'Combustão do hidrogênio: a ligação O=O e as ligações H–H são rompidas e ligações O–H, mais fortes, se formam, liberando muita energia. A mistura explode com faísca.' },
+  { id: 'h2_cl2', tipo: 'sintese', chaves: ['H', 'Cl'], eq: 'H₂(g) + Cl₂(g) → 2HCl(g)', dH: -185, g: 0, visual: 'faiscas', gas: 'HCl', solido: null, aq: false, liga: ['H', 'Cl'],
+    explica: 'Síntese explosiva sob luz ou faísca. O HCl formado é um gás de ligação covalente polar, que forma névoa branca ao encontrar a umidade do ar.' },
+  { id: 'na_cl2', tipo: 'sintese', chaves: ['Na', 'Cl'], eq: '2Na(s) + Cl₂(g) → 2NaCl(s)', dH: -822, g: 0, visual: 'faiscas', gas: null, solido: '#f8fafc', aq: false, liga: ['Na', 'Cl'],
+    explica: 'Diferença grande de eletronegatividade (Δχ ≈ 2,2): o sódio cede um elétron ao cloro, formando íons Na⁺ e Cl⁻ que se organizam em um cristal iônico.' },
+  { id: 'k_cl2', tipo: 'sintese', chaves: ['K', 'Cl'], eq: '2K(s) + Cl₂(g) → 2KCl(s)', dH: -873, g: 0, visual: 'faiscas', gas: null, solido: '#f8fafc', aq: false, liga: ['K', 'Cl'],
+    explica: 'Síntese iônica muito exotérmica. O potássio cede seu elétron de valência ao cloro.' },
+  { id: 'mg_cl2', tipo: 'sintese', chaves: ['Mg', 'Cl'], eq: 'Mg(s) + Cl₂(g) → MgCl₂(s)', dH: -641, g: 1, visual: 'brilho', gas: null, solido: '#f8fafc', aq: false, liga: ['Mg', 'Cl'],
+    explica: 'O magnésio cede dois elétrons, formando Mg²⁺ e dois Cl⁻: ligação iônica.' },
+  { id: 'fe_cl2', tipo: 'sintese', chaves: ['Fe', 'Cl'], eq: '2Fe(s) + 3Cl₂(g) → 2FeCl₃(s)', dH: -800, g: 1, visual: null, gas: null, solido: '#a16207', aq: false, liga: ['Fe', 'Cl'],
+    explica: 'O ferro reage com o cloro formando cloreto férrico, um sólido de ligação predominantemente iônica.' },
+  { id: 'cu_cl2', tipo: 'sintese', chaves: ['Cu', 'Cl'], eq: 'Cu(s) + Cl₂(g) → CuCl₂(s)', dH: -220, g: 2, visual: null, gas: null, solido: '#15803d', aq: false, liga: ['Cu', 'Cl'],
+    explica: 'O cobre é oxidado pelo cloro a Cu²⁺, formando um sólido iônico.' },
+  { id: 'na_o2', tipo: 'oxidacao', chaves: ['Na', 'O'], eq: '4Na(s) + O₂(g) → 2Na₂O(s)', dH: -829, g: 0, visual: 'chama', gas: null, solido: '#e5e7eb', aq: false, liga: ['Na', 'O'],
+    explica: 'Oxidação vigorosa do sódio ao ar. O óxido de sódio formado reage com a umidade e produz NaOH cáustico.' },
+  { id: 'k_o2', tipo: 'oxidacao', chaves: ['K', 'O'], eq: '4K(s) + O₂(g) → 2K₂O(s)', dH: -726, g: 0, visual: 'chama', gas: null, solido: '#e5e7eb', aq: false, liga: ['K', 'O'],
+    explica: 'O potássio se oxida rapidamente ao ar, com chama, formando um óxido iônico.' },
+  { id: 'li_o2', tipo: 'oxidacao', chaves: ['Li', 'O'], eq: '4Li(s) + O₂(g) → 2Li₂O(s)', dH: -1196, g: 1, visual: 'chama', gas: null, solido: '#e5e7eb', aq: false, liga: ['Li', 'O'],
+    explica: 'Oxidação do lítio com chama. O óxido formado é iônico.' },
+  { id: 'mg_o2', tipo: 'oxidacao', chaves: ['Mg', 'O'], eq: '2Mg(s) + O₂(g) → 2MgO(s)', dH: -1203, g: 1, visual: 'brilho', gas: null, solido: '#f8fafc', aq: false, liga: ['Mg', 'O'],
+    explica: 'A queima do magnésio é muito intensa, com luz branca brilhante. O MgO é um sólido iônico, com Mg²⁺ e O²⁻.' },
+  { id: 'al_o2', tipo: 'oxidacao', chaves: ['Al', 'O'], eq: '4Al(s) + 3O₂(g) → 2Al₂O₃(s)', dH: -3351, g: 2, visual: 'brilho', gas: null, solido: '#e5e7eb', aq: false, liga: ['Al', 'O'],
+    explica: 'O alumínio forma uma camada protetora de Al₂O₃. Em pó finamente dividido, a reação é intensa.' },
+  { id: 'c_o2', tipo: 'oxidacao', chaves: ['C', 'O'], eq: 'C(s) + O₂(g) → CO₂(g)', dH: -394, g: 2, visual: 'chama', gas: 'CO2', solido: null, aq: false, liga: ['C', 'O'],
+    explica: 'Combustão completa do carbono. O CO₂ é um gás molecular com ligações covalentes polares C=O.' },
+  { id: 's_o2', tipo: 'oxidacao', chaves: ['S', 'O'], eq: 'S(s) + O₂(g) → SO₂(g)', dH: -297, g: 1, visual: 'chama', gas: 'SO2', solido: null, aq: false, liga: ['S', 'O'],
+    explica: 'Queima do enxofre com chama azulada, formando dióxido de enxofre, gás irritante e tóxico.' },
+  { id: 'fe_o2', tipo: 'oxidacao', chaves: ['Fe', 'O'], eq: '4Fe(s) + 3O₂(g) → 2Fe₂O₃(s)', dH: -1648, g: 2, visual: null, gas: null, solido: '#b45309', aq: false, liga: ['Fe', 'O'],
+    explica: 'Oxidação do ferro (ferrugem). Forma um sólido vermelho-alaranjado, de ligação iônica com forte caráter covalente.' },
+  { id: 'cu_o2', tipo: 'oxidacao', chaves: ['Cu', 'O'], eq: '2Cu(s) + O₂(g) → 2CuO(s)', dH: -314, g: 2, visual: null, gas: null, solido: '#1f2937', aq: false, liga: ['Cu', 'O'],
+    explica: 'Oxidação do cobre ao ar, formando óxido cúprico preto.' },
+  { id: 'fe_s', tipo: 'sintese', chaves: ['Fe', 'S'], eq: 'Fe(s) + S(s) → FeS(s)', dH: -100, g: 2, visual: null, gas: null, solido: '#1f2937', aq: false, liga: ['Fe', 'S'],
+    explica: 'Síntese de sulfeto de ferro, um sólido preto. Com ácidos, libera H₂S tóxico.' },
+  { id: 'mg_hcl', tipo: 'deslocamento', chaves: ['Mg', 'HCl'], eq: 'Mg(s) + 2HCl(aq) → MgCl₂(aq) + H₂(g)', dH: -467, g: 1, visual: null, gas: 'H2', solido: null, aq: true, liga: ['Mg', 'Cl'],
+    explica: 'O magnésio, mais reativo que o hidrogênio, desloca o H₂ do ácido. Há borbulhamento intenso de hidrogênio.' },
+  { id: 'al_hcl', tipo: 'deslocamento', chaves: ['Al', 'HCl'], eq: '2Al(s) + 6HCl(aq) → 2AlCl₃(aq) + 3H₂(g)', dH: -1030, g: 1, visual: null, gas: 'H2', solido: null, aq: true, liga: ['Al', 'Cl'],
+    explica: 'O alumínio desloca o hidrogênio do ácido, mesmo com a camada de óxido. A reação se acelera com o tempo.' },
+  { id: 'na_hcl', tipo: 'deslocamento', chaves: ['Na', 'HCl'], eq: '2Na(s) + 2HCl(aq) → 2NaCl(aq) + H₂(g)', dH: -483, g: 0, visual: 'faiscas', gas: 'H2', solido: null, aq: true, liga: ['Na', 'Cl'],
+    explica: 'O sódio reage com o ácido de forma explosiva; o calor inflama o hidrogênio liberado.' },
+  { id: 'zn_hcl', tipo: 'deslocamento', chaves: ['Zn', 'HCl'], eq: 'Zn(s) + 2HCl(aq) → ZnCl₂(aq) + H₂(g)', dH: -153, g: 2, visual: null, gas: 'H2', solido: null, aq: true, liga: ['Zn', 'Cl'],
+    explica: 'Clássico deslocamento simples: o zinco substitui o hidrogênio do ácido, formando cloreto de zinco e H₂.' },
+  { id: 'fe_hcl', tipo: 'deslocamento', chaves: ['Fe', 'HCl'], eq: 'Fe(s) + 2HCl(aq) → FeCl₂(aq) + H₂(g)', dH: -89, g: 2, visual: null, gas: 'H2', solido: null, aq: true, liga: ['Fe', 'Cl'],
+    explica: 'O ferro é menos reativo que o zinco, então a reação com o ácido é mais lenta.' },
+  { id: 'ca_hcl', tipo: 'deslocamento', chaves: ['Ca', 'HCl'], eq: 'Ca(s) + 2HCl(aq) → CaCl₂(aq) + H₂(g)', dH: -530, g: 1, visual: null, gas: 'H2', solido: null, aq: true, liga: ['Ca', 'Cl'],
+    explica: 'O cálcio é muito reativo e desloca o hidrogênio do ácido com liberação de calor.' },
+  { id: 'cu_hcl', tipo: 'semreacao', chaves: ['Cu', 'HCl'], eq: 'Cu(s) + HCl(aq) → sem reação', dH: 0, g: 2, visual: null, gas: null, solido: null, aq: false, liga: null,
+    explica: 'O cobre está abaixo do hidrogênio na série de reatividade, então não desloca H₂ do ácido clorídrico.' }
+];
+
+function elementoPorSimbolo(s) {
+  return ELEMENTOS_TP.find((e) => e.s === s);
+}
+
+// Ligação entre dois átomos pela diferença de eletronegatividade (Δχ)
+function classificarLigacao(a, b) {
+  const ea = elementoPorSimbolo(a);
+  const eb = elementoPorSimbolo(b);
+  if (!ea || !eb || ea.chi === null || eb.chi === null) return null;
+  const metais = ['alcalino', 'alcalinoterroso', 'transicao', 'metalPos'];
+  const delta = Math.abs(ea.chi - eb.chi);
+  let tipo = delta > 1.7 ? 'iônica' : delta > 0.4 ? 'covalente polar' : 'covalente apolar';
+  if (metais.includes(ea.g) && metais.includes(eb.g)) tipo = 'metálica';
+  return { a, b, chiA: ea.chi, chiB: eb.chi, delta: delta.toFixed(2), tipo };
+}
+
+const DESCRICAO_LIGACAO = {
+  'iônica': 'transferência de elétrons de um átomo menos eletronegativo para outro mais eletronegativo, formando íons que se atraem.',
+  'covalente polar': 'compartilhamento desigual de elétrons; o átomo mais eletronegativo fica com carga parcial negativa.',
+  'covalente apolar': 'compartilhamento igual de elétrons entre os átomos.',
+  'metálica': 'elétrons deslocalizados entre cátions metálicos.'
+};
+
+// Quebra a equação nos produtos e obtém o estado físico e o risco de cada um
+function parseProdutos(eq) {
+  const lado = eq.split('→')[1] || '';
+  return lado
+    .split(' + ')
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => {
+      const estado = (t.match(/\((s|l|g|aq)\)$/) || [])[1] || '';
+      const formula = t.replace(/^\d+/, '').replace(/\((s|l|g|aq)\)$/, '').trim();
+      return {
+        token: t,
+        formula,
+        estado: ESTADO_LABEL[estado] || '',
+        risco: PRODUTOS_RISCO[formula] || 'Consulte a ficha de segurança deste produto.'
+      };
+    });
+}
+
+function analisarElementos(chaves) {
+  const encontradas = REACOES_TP.filter((r) => r.chaves.every((c) => chaves.includes(c)));
+  const ordenadas = [...encontradas].sort((a, b) => a.g - b.g);
+  const soNobres = chaves.length > 0 && chaves.every((c) => ['He', 'Ne', 'Ar'].includes(c));
+
+  const base = ordenadas[0] || (soNobres
+    ? { tipo: 'inerte', eq: 'Sem reação (gases nobres)', dH: 0, g: 2, visual: null, gas: null, solido: null, aq: false, liga: null,
+        explica: 'Gases nobres têm a camada de valência completa e quase não formam ligações com outros elementos.' }
+    : { tipo: 'sem_reacao', eq: 'Sem reação prevista', dH: 0, g: 2, visual: null, gas: null, solido: null, aq: false, liga: null,
+        explica: 'Nenhuma regra do modelo prevê reação entre estes elementos nas condições ambiente.' });
+
+  const temProdutos = base.tipo !== 'semreacao' && base.tipo !== 'inerte' && base.tipo !== 'sem_reacao';
+  const raw = Math.abs(base.dH) * 1000 / (250 * 4.18);
+  const dT = base.aq ? (base.dH < 0 ? raw : -raw) : 0;
+
+  return {
+    tipo: base.tipo,
+    tipoLabel: TIPO_LABEL[base.tipo] || base.tipo,
+    eq: base.eq,
+    dH: base.dH,
+    exo: base.dH < 0,
+    gravidade: base.g,
+    visual: base.visual,
+    gas: base.gas,
+    solido: base.solido,
+    aq: base.aq,
+    dT,
+    produtos: temProdutos ? parseProdutos(base.eq) : [],
+    liga: base.liga ? classificarLigacao(base.liga[0], base.liga[1]) : null,
+    explica: base.explica,
+    outras: ordenadas.slice(1).map((r) => r.eq)
+  };
+}
+
+function ModoElementos({ ehDesktop }) {
+  const [escolhidos, setEscolhidos] = useState(['Na', 'Cl']);
+
+  const alternar = (chave) => {
+    setEscolhidos((atual) => {
+      if (atual.includes(chave)) return atual.filter((k) => k !== chave);
+      return atual.length < 4 ? [...atual, chave] : atual;
+    });
+  };
+
+  const res = analisarElementos(escolhidos);
+  const corLiquido = res.aq ? 'rgba(56, 189, 248, 0.55)' : 'rgba(100, 116, 139, 0.55)';
+  const gasCor = res.gas ? GAS_COR[res.gas] : null;
+  const dTVisual = res.dT;
+  const dTTexto = res.aq && Math.abs(res.dT) > 75 ? 'acima de 100 °C (a água ferveria)' : `${res.dT >= 0 ? '+' : ''}${res.dT.toFixed(1)} °C`;
+  const corTipo = res.gravidade === 0 ? '#dc2626' : res.gravidade === 1 ? CORES.laranja : CORES.cyan;
+  const elementosEscolhidos = escolhidos.map((k) => elementoPorSimbolo(k)).filter(Boolean);
+
+  return (
+    <div style={{ ...estilos.cartao, display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Tabela Periódica · combinação de elementos</h2>
+        <p style={{ margin: '6px 0 0', fontSize: 12, color: CORES.textoSecundario }}>
+          Escolha de 2 a 4 elementos ou compostos. O simulador identifica o tipo de reação, a equação balanceada e o que acontece no béquer.
+        </p>
+      </div>
+
+      {/* Legenda dos grupos */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {Object.values(GRUPOS_ELEMENTOS).map((g) => (
+          <span key={g.nome} style={{ fontSize: 11, color: g.cor, border: `1px solid ${g.cor}66`, background: `${g.cor}18`, borderRadius: 999, padding: '3px 10px' }}>
+            {g.nome}
+          </span>
+        ))}
+      </div>
+
+      {/* Tabela periódica */}
+      <div style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: 720, display: 'grid', gridTemplateColumns: 'repeat(18, minmax(0, 1fr))', gridAutoRows: '52px', gap: 3 }}>
+          {ELEMENTOS_TP.map((e) => {
+            const cor = GRUPOS_ELEMENTOS[e.g].cor;
+            const sel = escolhidos.includes(e.s);
+            return (
+              <button
+                key={e.s}
+                onClick={() => alternar(e.s)}
+                title={`${e.nome} · Z = ${e.z} · massa atômica ${e.m} u · eletronegatividade ${e.chi ?? '—'}`}
+                style={{
+                  gridRow: e.r,
+                  gridColumn: e.c,
+                  padding: 2,
+                  borderRadius: 6,
+                  border: `1px solid ${cor}`,
+                  background: sel ? cor : `${cor}22`,
+                  color: sel ? '#0f172a' : CORES.texto,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: sel ? `0 0 12px ${cor}` : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span style={{ fontSize: 9, opacity: 0.8 }}>{e.z}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, lineHeight: 1 }}>{e.s}</span>
+                <span style={{ fontSize: 8, opacity: 0.8 }}>{e.m.toFixed(1)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Compostos e limpeza */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: CORES.textoSecundario }}>Compostos:</span>
+        {COMPOSTOS_TP.map((c) => {
+          const sel = escolhidos.includes(c.s);
+          return (
+            <button
+              key={c.s}
+              onClick={() => alternar(c.s)}
+              style={{
+                border: `1px solid ${sel ? CORES.cyan : CORES.bordaForte}`,
+                background: sel ? 'rgba(34, 211, 238, 0.15)' : CORES.superficieAlt,
+                color: sel ? CORES.cyan : CORES.texto,
+                borderRadius: 999,
+                padding: '6px 12px',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              {c.formula} · {c.nome}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setEscolhidos([])}
+          style={{ marginLeft: 'auto', background: 'none', border: `1px solid ${CORES.bordaForte}`, color: CORES.textoSecundario, borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}
+        >
+          Limpar
+        </button>
+      </div>
+
+      {escolhidos.length < 2 ? (
+        <p style={{ margin: 0, padding: 18, textAlign: 'center', fontSize: 13, color: CORES.textoSutil, border: `1px dashed ${CORES.bordaForte}`, borderRadius: 12 }}>
+          Selecione pelo menos 2 elementos ou compostos para simular a reação.
+        </p>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: ehDesktop ? '1fr 1fr' : '1fr', gap: 24, alignItems: 'start' }}>
+
+          {/* Béquer com efeitos da reação */}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 40, padding: 28, paddingTop: 90, background: CORES.fundo, borderRadius: 14, border: `1px solid ${CORES.borda}` }}>
+            <div style={{ position: 'relative' }}>
+              {res.visual === 'faiscas' && [0, 1, 2, 3, 4, 5].map((i) => (
+                <span
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    bottom: 200,
+                    left: 60 + i * 8,
+                    width: 4,
+                    height: 4,
+                    borderRadius: '50%',
+                    background: '#fde047',
+                    boxShadow: '0 0 6px #fde047',
+                    '--dx': `${(i - 2.5) * 18}px`,
+                    '--dy': `${-40 - i * 8}px`,
+                    animation: `faisca ${0.8 + i * 0.15}s ease-out infinite`,
+                    animationDelay: `${i * 0.2}s`
+                  }}
+                />
+              ))}
+              {(res.visual === 'chama' || res.visual === 'brilho') && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    bottom: 200,
+                    left: 50,
+                    width: 50,
+                    height: 40,
+                    borderRadius: '50% 50% 40% 40%',
+                    background: res.visual === 'brilho'
+                      ? 'radial-gradient(circle, #ffffff, #fde68a 60%, transparent)'
+                      : 'radial-gradient(circle at 50% 80%, #fde047, #f97316 60%, transparent)',
+                    filter: 'blur(2px)',
+                    transformOrigin: 'bottom center',
+                    animation: res.visual === 'brilho' ? 'brilho 0.6s ease-in-out infinite' : 'chamaTremula 0.5s ease-in-out infinite'
+                  }}
+                />
+              )}
+              <Becher
+                volume={250}
+                cor={corLiquido}
+                reacao={{ cor: gasCor, bolhas: Boolean(res.gas) || res.tipo === 'deslocamento', deltaT: dTVisual, fumaca: res.gas === 'Cl2' || res.gas === 'HCl' || res.visual === 'faiscas' }}
+                precipFracao={res.solido ? 0.6 : 0}
+                precipCor={res.solido || '#93c5fd'}
+              />
+            </div>
+            <div style={{ paddingBottom: 4 }}>
+              <Termometro temperatura={25 + dTVisual} delta={dTVisual} percentual={Math.min(Math.max(((25 + dTVisual - 20) / 60) * 100, 8), 100)} />
+            </div>
+          </div>
+
+          {/* Resultados */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            <div style={{ background: 'rgba(30, 41, 59, 0.6)', border: `1px solid ${corTipo}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span style={{ alignSelf: 'flex-start', background: corTipo, color: '#fff', padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                {res.tipoLabel}
+              </span>
+              <p style={{ margin: 0, fontFamily: 'monospace', fontSize: 15, lineHeight: 1.6, color: CORES.texto }}>{res.eq}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 12 }}>
+                <span style={{ color: CORES.textoSecundario }}>Energia (ΔH, valor de referência)</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 700, color: res.exo ? CORES.laranja : CORES.azul }}>
+                  {res.dH.toFixed(0)} kJ · {res.tipo === 'sem_reacao' || res.tipo === 'inerte' || res.tipo === 'semreacao' ? 'sem reação' : res.exo ? 'exotérmica' : 'endotérmica'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
+                <span style={{ color: CORES.textoSecundario }}>Variação de temperatura (ΔT)</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>
+                  {res.aq ? dTTexto : 'não estimado (sem água no béquer)'}
+                </span>
+              </div>
+              {res.aq && (
+                <p style={{ margin: 0, fontSize: 11, color: CORES.textoSutil }}>
+                  ΔT se 1 mol da reação, conforme a equação, aquecesse 250 g de água. Ilustrativo.
+                </p>
+              )}
+            </div>
+
+            {res.produtos.length > 0 && (
+              <div style={{ background: 'rgba(30, 41, 59, 0.5)', border: `1px solid ${CORES.bordaForte}`, borderRadius: 12, padding: 16 }}>
+                <p style={{ ...estilos.rotulo, marginBottom: 10 }}>Produtos, estado físico e riscos</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {res.produtos.map((p) => (
+                    <div key={p.token} style={{ fontSize: 12 }}>
+                      <p style={{ margin: 0 }}>
+                        <strong style={{ fontFamily: 'monospace' }}>{p.formula}</strong>{' '}
+                        <span style={{ color: CORES.cyan }}>({p.estado})</span>
+                      </p>
+                      <p style={{ margin: '2px 0 0', color: CORES.textoSecundario }}>{p.risco}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {res.liga && (
+              <div style={{ background: 'rgba(30, 41, 59, 0.5)', border: `1px solid ${CORES.bordaForte}`, borderRadius: 12, padding: 16 }}>
+                <p style={{ ...estilos.rotulo, marginBottom: 8 }}>Ligação formada: {res.liga.tipo}</p>
+                <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: CORES.texto }}>
+                  Entre {res.liga.a} (χ = {res.liga.chiA}) e {res.liga.b} (χ = {res.liga.chiB}), Δχ = {res.liga.delta}: {DESCRICAO_LIGACAO[res.liga.tipo]}
+                </p>
+              </div>
+            )}
+
+            <div style={{ background: 'rgba(30, 41, 59, 0.5)', border: `1px solid ${CORES.bordaForte}`, borderRadius: 12, padding: 16 }}>
+              <p style={{ ...estilos.rotulo, marginBottom: 8 }}>Explicação</p>
+              <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: CORES.texto }}>{res.explica}</p>
+              {elementosEscolhidos.length > 0 && (
+                <p style={{ margin: '10px 0 0', fontSize: 11, color: CORES.textoSutil }}>
+                  Eletronegatividade: {elementosEscolhidos.map((e) => `${e.s} ${e.chi ?? '—'}`).join(' · ')}
+                </p>
+              )}
+              {res.outras.length > 0 && (
+                <p style={{ margin: '10px 0 0', fontSize: 11, color: CORES.textoSutil }}>
+                  Outras reações possíveis: {res.outras.join(' ; ')}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <p style={{ margin: 0, fontSize: 11, color: CORES.textoSutil }}>
+        Os ΔH são valores de referência aproximados de livros-texto. O modelo cobre apenas as reações listadas; não é um banco completo de reações.
+      </p>
+    </div>
+  );
+}
+
 function useLargura() {
   const [largura, setLargura] = useState(() => window.innerWidth);
   useEffect(() => {
@@ -794,7 +1283,7 @@ function useLargura() {
   return largura;
 }
 
-function Becher({ volume, cor, reacao, precipFracao }) {
+function Becher({ volume, cor, reacao, precipFracao, precipCor = '#93c5fd' }) {
   const alturaLiquido = Math.min((volume / 1000) * 100, 90);
   const temFumaca = reacao.cor && (reacao.deltaT > 15 || reacao.fumaca);
 
@@ -886,7 +1375,7 @@ function Becher({ volume, cor, reacao, precipFracao }) {
             left: 0,
             right: 0,
             height: `${precipFracao * 30}%`,
-            background: 'repeating-radial-gradient(circle at 30% 40%, #93c5fd 0 2px, #60a5fa 2px 4px)',
+            background: `repeating-radial-gradient(circle at 30% 40%, ${precipCor} 0 2px, ${precipCor}99 2px 4px)`,
             opacity: 0.85,
             transition: 'height 0.8s ease'
           }} />
@@ -1424,13 +1913,13 @@ export default function App() {
         ...estilos.container,
         marginTop: 24,
         display: 'grid',
-        gridTemplateColumns: ehDesktop ? '380px 1fr' : '1fr',
+        gridTemplateColumns: ehDesktop && abaAtiva !== 'elementos' ? '380px 1fr' : '1fr',
         gap: 24,
         alignItems: 'start'
       }}>
 
         {/* Coluna esquerda: mistura, atalhos, catálogo e cadastro */}
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: 20 }} className="no-print">
+        <aside style={{ display: abaAtiva === 'elementos' ? 'none' : 'flex', flexDirection: 'column', gap: 20 }} className="no-print">
 
           {/* Mistura atual */}
           <section style={estilos.cartao}>
@@ -2088,6 +2577,9 @@ export default function App() {
               </div>
             </div>
           )}
+
+          {/* ABA: TABELA PERIÓDICA */}
+          {abaAtiva === 'elementos' && <ModoElementos ehDesktop={ehDesktop} />}
 
           {/* ABA 5: RELATÓRIO CLÍNICO */}
           {abaAtiva === 'report' && (
