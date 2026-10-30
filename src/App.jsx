@@ -2167,6 +2167,16 @@ export default function App() {
         {/* Coluna direita: abas */}
         <section style={{ minWidth: 0 }}>
 
+          {/* Aviso de ingestão: vale para qualquer mistura, independentemente do pH ou do volume */}
+          {selecionadas.length > 0 && (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: 14, marginBottom: 20, borderRadius: 12, background: 'rgba(69, 10, 10, 0.5)', border: '1px solid #991b1b', fontSize: 13, color: '#fecaca', lineHeight: 1.6 }}>
+              <AlertTriangle size={20} color={CORES.rosa} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span>
+                Ingerir qualquer quantidade de uma solução, mesmo que não seja cáustica, pode ser perigoso em volumes grandes. Em caso de ingestão real, procure atendimento imediatamente e ligue para o centro de intoxicações (Brasil: 0800 722 6001).
+              </span>
+            </div>
+          )}
+
           {/* ABA 1: LABORATÓRIO VIRTUAL */}
           {abaAtiva === 'lab' && (
             <div style={estilos.cartao}>
