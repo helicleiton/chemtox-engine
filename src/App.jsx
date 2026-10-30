@@ -75,7 +75,7 @@ const SUBSTANCIAS = [
     descricao: 'Antitussígeno opioide. Potencializa a depressão do SNC e respiratória quando combinado com álcool.' },
 
   // Solventes e orgânicos
-  { id: 'alcohol', nome: 'Álcool Etílico 70%', formula: 'C₂H₅OH', categoria: 'Solventes', ph: 7.0, cor: '#06b6d4', tipo: 'solvent',
+  { id: 'alcohol', nome: 'Álcool Etílico 70%', formula: 'C₂H₅OH', categoria: 'Solventes', ph: 7.0, cor: '#06b6d4', tipo: 'solvent', etanol: true,
     conc: 0, absorcao: { ka: 2.0, ke: 0.15 },
     descricao: 'Solvente inflamável e depressor do SNC.' },
   { id: 'acetona', nome: 'Acetona', formula: 'C₃H₆O', categoria: 'Solventes', ph: 7.0, cor: '#67e8f9', tipo: 'solvent', aquoso: false,
@@ -87,6 +87,43 @@ const SUBSTANCIAS = [
   { id: 'metanol', nome: 'Metanol', formula: 'CH₃OH', categoria: 'Solventes', ph: 7.0, cor: '#22d3ee', tipo: 'solvent', metanol: true,
     conc: 0, absorcao: { ka: 1.0, ke: 0.1 },
     descricao: 'Álcool tóxico. Metabolizado em produtos que causam acidose metabólica e danos ao nervo óptico.' },
+
+  // Bebidas alcoólicas e não alcoólicas (teor de etanol e acidez aproximados)
+  { id: 'cerveja', nome: 'Cerveja (5% álcool)', formula: 'C₂H₅OH (5%)', categoria: 'Bebidas', ph: 4.3, cor: '#f59e0b', tipo: 'beverage', etanol: true,
+    conc: 0.0001, acido: { pKa: 4.4, n: 1 }, absorcao: { ka: 1.5, ke: 0.15 },
+    descricao: 'Bebida fermentada de baixo teor alcoólico. Contém etanol, que deprime o SNC e potencializa outras substâncias.' },
+  { id: 'vinho_tinto', nome: 'Vinho Tinto (12% álcool)', formula: 'C₂H₅OH (12%)', categoria: 'Bebidas', ph: 3.6, cor: '#7f1d1d', tipo: 'beverage', etanol: true,
+    conc: 0.0003, acido: { pKa: 3.5, n: 1 }, absorcao: { ka: 1.2, ke: 0.15 },
+    descricao: 'Vinho de uva fermentada, ácido e com etanol. Efeito depressor do SNC proporcional à quantidade ingerida.' },
+  { id: 'vinho_branco', nome: 'Vinho Branco (12% álcool)', formula: 'C₂H₅OH (12%)', categoria: 'Bebidas', ph: 3.2, cor: '#fef9c3', tipo: 'beverage', etanol: true,
+    conc: 0.0008, acido: { pKa: 3.4, n: 1 }, absorcao: { ka: 1.2, ke: 0.15 },
+    descricao: 'Vinho de uva branca, mais ácido que o tinto, com etanol.' },
+  { id: 'cachaca', nome: 'Cachaça (40% álcool)', formula: 'C₂H₅OH (40%)', categoria: 'Bebidas', ph: 4.5, cor: '#e5e7eb', tipo: 'beverage', etanol: true,
+    conc: 0.00005, acido: { pKa: 4.8, n: 1 }, absorcao: { ka: 2.0, ke: 0.15 },
+    descricao: 'Destilado de cana-de-açúcar com alto teor alcoólico. Depressão do SNC e risco de intoxicação aguda.' },
+  { id: 'whisky', nome: 'Uísque (40% álcool)', formula: 'C₂H₅OH (40%)', categoria: 'Bebidas', ph: 5.5, cor: '#b45309', tipo: 'beverage', etanol: true,
+    conc: 0.00001, acido: { pKa: 5.5, n: 1 }, absorcao: { ka: 2.0, ke: 0.15 },
+    descricao: 'Destilado de cereais envelhecido em barril, com alto teor alcoólico.' },
+  { id: 'vodca', nome: 'Vodca (40% álcool)', formula: 'C₂H₅OH (40%)', categoria: 'Bebidas', ph: 6.0, cor: '#f8fafc', tipo: 'beverage', etanol: true,
+    conc: 0.000001, acido: { pKa: 6.5, n: 1 }, absorcao: { ka: 2.0, ke: 0.15 },
+    descricao: 'Destilado neutro com alto teor alcoólico. Depressão do SNC e risco de intoxicação aguda.' },
+  { id: 'refrigerante', nome: 'Refrigerante de Cola', formula: 'H₃PO₄', categoria: 'Bebidas', ph: 2.5, cor: '#451a03', tipo: 'beverage',
+    conc: 0.002, acido: { pKa: 2.15, n: 1 },
+    descricao: 'Bebida gaseificada acidulada com ácido fosfórico. Não é cáustica, mas pode irritar o estômago e erodir o esmalte dentário.' },
+
+  // Outros produtos diversos
+  { id: 'cloro_piscina', nome: 'Cloro para Piscina (Hipoclorito de Cálcio)', formula: 'Ca(ClO)₂', categoria: 'Produtos Domésticos', ph: 11.0, cor: '#f1f5f9', tipo: 'household', oxidante: true,
+    conc: 0.2, base: { pKb: 6.5, n: 2, sal: true },
+    descricao: 'Oxidante sólido de tratamento de água. Nunca misturar com ácidos, amônia ou outros produtos.' },
+  { id: 'agua_destilada', nome: 'Água Destilada', formula: 'H₂O', categoria: 'Produtos Domésticos', ph: 7.0, cor: '#e0f2fe', tipo: 'water',
+    conc: 0,
+    descricao: 'Água sem sais dissolvidos, usada em laboratório e em aparelhos. Atóxica.' },
+  { id: 'acetato_etila', nome: 'Acetato de Etila (Removedor de Esmalte)', formula: 'CH₃COOC₂H₅', categoria: 'Solventes', ph: 7.0, cor: '#fef3c7', tipo: 'solvent', aquoso: false,
+    conc: 0,
+    descricao: 'Solvente volátil e inflamável. Vapores causam tontura e irritação das vias aéreas.' },
+  { id: 'sulfato_magnesio', nome: 'Sulfato de Magnésio (Sal de Epsom)', formula: 'MgSO₄', categoria: 'Sais & Metais', ph: 6.5, cor: '#f8fafc', tipo: 'salt',
+    conc: 0,
+    descricao: 'Sal laxante de uso medicinal. Em excesso causa desidratação e distúrbios eletrolíticos.' },
 
   // Sais e metais
   { id: 'nacl', nome: 'Cloreto de Sódio (Sal de Cozinha)', formula: 'NaCl', categoria: 'Sais & Metais', ph: 7.0, cor: '#e2e8f0', tipo: 'salt',
@@ -106,6 +143,7 @@ const FILTROS = [
   { rotulo: 'Bases', valor: 'Bases' },
   { rotulo: 'Domésticos', valor: 'Produtos Domésticos' },
   { rotulo: 'Medicamentos', valor: 'Medicamentos' },
+  { rotulo: 'Bebidas', valor: 'Bebidas' },
   { rotulo: 'Solventes', valor: 'Solventes' },
   { rotulo: 'Sais/Metais', valor: 'Sais & Metais' }
 ];
@@ -535,7 +573,8 @@ function calcularSeveridade(sel, mix) {
   if (sel.length === 0) {
     return { nivel: 'SEM MISTURA', cor: '#475569', tempo: 'Sem risco imediato', indice: -1 };
   }
-  const porNominal = sel.some((s) => s.ph !== null && (s.ph < 3 || s.ph > 11)) || mix.pH < 2.5 || mix.pH > 11.5;
+  // Alto risco só para pH muito extremo; ácidos fracos (vinagre, refrigerante) ficam como moderados
+  const porNominal = sel.some((s) => s.ph !== null && (s.ph < 2 || s.ph > 11)) || mix.pH < 2.2 || mix.pH > 11;
   const indice = Math.min(mix.primaria.gravidade, porNominal ? 1 : 2);
   if (indice === 0) {
     return { nivel: 'FATAL / CRÍTICO', cor: '#dc2626', tempo: 'Crítico: primeiros 15 minutos', indice };
@@ -568,9 +607,9 @@ function avaliarOrgaos(sel, mix, sev) {
   const gasTox = tem('cloro') || tem('cloramina');
   const reagiu = ['cloro', 'cloramina', 'neutralizacao', 'hidrogenio', 'co2', 'nh4cl'].some(tem);
   const corr = avaliarCorrosividade(sel, mix);
-  const extremo = sel.some((s) => s.ph !== null && (s.ph < 4 || s.ph > 9)) || mix.pH < 4 || mix.pH > 9;
+  const extremo = sel.some((s) => s.ph !== null && (s.ph < 3 || s.ph > 10)) || mix.pH < 3 || mix.pH > 10;
   const paracetamol = sel.some((s) => s.id === 'paracetamol');
-  const alcool = sel.some((s) => s.id === 'alcohol');
+  const alcool = sel.some((s) => s.etanol);
   const opioide = sel.some((s) => s.opioide);
   const metanol = sel.some((s) => s.metanol);
 
@@ -623,7 +662,7 @@ function calcularMetricas(sel, mix, sev, organos) {
   const corr = avaliarCorrosividade(sel, mix);
   const tipos = mix.reacoes.map((r) => r.tipo);
   const gasTox = tipos.includes('cloro') || tipos.includes('cloramina');
-  const alcool = sel.some((s) => s.id === 'alcohol');
+  const alcool = sel.some((s) => s.etanol);
   const opioide = sel.some((s) => s.opioide);
   const metanol = sel.some((s) => s.metanol);
   const nivelF = organos.find((o) => o.id === 'figado').nivel;
