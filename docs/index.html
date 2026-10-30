@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ChemTox Engine: simulador didático de misturas químicas e toxicologia humana." />
+    <title>ChemTox Engine</title>
+    <style>
+      :root {
+        --fundo: #020617;
+        --superficie: #0f172a;
+        --borda: #1e293b;
+        --texto: #f1f5f9;
+        --secundario: #94a3b8;
+        --sutil: #64748b;
+        --cyan: #22d3ee;
+        --azul: #3b82f6;
+        --vermelho: #ef4444;
+        --amarelo: #eab308;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--fundo);
+        color: var(--texto);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+      }
+      a { color: var(--cyan); }
+      .container { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+      header.topo {
+        border-bottom: 1px solid var(--borda);
+        background: rgba(15, 23, 42, 0.9);
+      }
+      header.topo .container { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; gap: 12px; flex-wrap: wrap; }
+      .marca { font-weight: 800; font-size: 20px; background: linear-gradient(90deg, var(--cyan), var(--azul)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      nav a { color: var(--secundario); text-decoration: none; margin-left: 18px; font-size: 14px; }
+      nav a:hover { color: var(--texto); }
+      .hero { padding: 72px 0 56px; text-align: center; }
+      .hero h1 {
+        font-size: clamp(32px, 6vw, 52px);
+        margin: 0 0 14px;
+        font-weight: 800;
+        background: linear-gradient(90deg, var(--cyan), var(--azul), var(--vermelho));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero p { color: var(--secundario); font-size: 18px; max-width: 680px; margin: 0 auto; }
+      .botoes { margin-top: 28px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+      .botao {
+        display: inline-block;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 15px;
+      }
+      .botao.primario { background: var(--cyan); color: #0f172a; box-shadow: 0 0 20px rgba(34, 211, 238, 0.35); }
+      .botao.secundario { border: 1px solid #334155; color: var(--texto); }
+      section { padding: 48px 0; }
+      section h2 { font-size: 26px; margin: 0 0 8px; }
+      section > .container > p.intro { color: var(--secundario); margin: 0 0 28px; }
+      .grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+      .cartao {
+        background: var(--superficie);
+        border: 1px solid var(--borda);
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+      }
+      .cartao h3 { margin: 0 0 8px; font-size: 16px; }
+      .cartao p { margin: 0; color: var(--secundario); font-size: 14px; }
+      .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+      .tag.cyan { color: var(--cyan); }
+      .tag.vermelho { color: var(--vermelho); }
+      .tag.amarelo { color: var(--amarelo); }
+      .tag.azul { color: var(--azul); }
+      .passos { counter-reset: passo; display: grid; gap: 12px; padding: 0; list-style: none; margin: 0; }
+      .passos li {
+        counter-increment: passo;
+        background: var(--superficie);
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        padding: 16px 16px 16px 56px;
+        position: relative;
+        color: var(--secundario);
+      }
+      .passos li::before {
+        content: counter(passo);
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--cyan);
+        color: #0f172a;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+      }
+      code, pre {
+        font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+        font-size: 13px;
+      }
+      pre {
+        background: #020617;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        color: var(--texto);
+        margin: 12px 0 0;
+      }
+      .aviso {
+        border: 1px solid #7f1d1d;
+        background: rgba(69, 10, 10, 0.5);
+        border-radius: 14px;
+        padding: 20px;
+        color: #fecaca;
+        font-size: 14px;
+      }
+      .aviso strong { color: #fff; }
+      footer {
+        border-top: 1px solid var(--borda);
+        padding: 24px 0;
+        text-align: center;
+        color: var(--sutil);
+        font-size: 13px;
+      }
+      @media (max-width: 600px) {
+        nav a { margin-left: 12px; }
+        .hero { padding: 48px 0 40px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topo">
+      <div class="container">
+        <span class="marca">ChemTox Engine</span>
+        <nav>
+          <a href="#recursos">Recursos</a>
+          <a href="#como-usar">Como usar</a>
+          <a href="#aviso">Aviso</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container">
+          <h1>Simulador de Misturas &amp; Toxicologia Humana</h1>
+          <p>
+            Monte misturas de substâncias do dia a dia e de laboratório, veja a reação no béquer
+            e acompanhe os efeitos fisiológicos e o tempo útil para atendimento médico.
+          </p>
+          <div class="botoes">
+            <a class="botao primario" href="#como-usar">Rodar localmente</a>
+            <a class="botao secundario" href="#recursos">Ver recursos</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="recursos">
+        <div class="container">
+          <h2>Recursos</h2>
+          <p class="intro">Tudo em um único componente React, com estilos inline e ícones do lucide-react.</p>
+          <div class="grade">
+            <div class="cartao">
+              <span class="tag cyan">Laboratório</span>
+              <h3>Béquer em tempo real</h3>
+              <p>Cor da solução pela escala de pH, efervescência, fumaça de vapores e termômetro acompanhando a reação.</p>
+            </div>
+            <div class="cartao">
+              <span class="tag vermelho">Reações de perigo</span>
+              <h3>Cenários detectados</h3>
+              <p>Neutralização ácido-base, gás cloro, cloraminas, sódio com água, água oxigenada com detergente e saponificação.</p>
+            </div>
+            <div class="cartao">
+              <span class="tag amarelo">Fisiologia</span>
+              <h3>Órgãos afetados</h3>
+              <p>Diagrama do corpo humano com órgãos clicáveis, que piscam conforme o nível de risco e mostram o tempo estimado de complicação.</p>
+            </div>
+            <div class="cartao">
+              <span class="tag azul">Catálogo</span>
+              <h3>26 substâncias</h3>
+              <p>Busca por nome ou fórmula (ex: HCl, acetona), filtros por categoria e cadastro de substâncias próprias, que ficam salvas no navegador.</p>
+            </div>
+            <div class="cartao">
+              <span class="tag cyan">Primeiros socorros</span>
+              <h3>Protocolo de emergência</h3>
+              <p>Condutas recomendadas, incluindo a contraindicação de induzir vômito em corrosivos.</p>
+            </div>
+            <div class="cartao">
+              <span class="tag azul">Relatório</span>
+              <h3>Dossiê da simulação</h3>
+              <p>Resumo técnico com reagentes, pH, avaliação de risco, tempo útil e órgãos em risco, pronto para imprimir.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="como-usar">
+        <div class="container">
+          <h2>Como usar</h2>
+          <p class="intro">Requisitos: Node.js 18 ou superior.</p>
+          <ol class="passos">
+            <li>
+              Instale as dependências na pasta do projeto:
+              <pre>npm install</pre>
+            </li>
+            <li>
+              Inicie o servidor de desenvolvimento:
+              <pre>npm run dev</pre>
+            </li>
+            <li>
+              Abra <code>http://localhost:5173</code> no navegador. Escolha até três substâncias no catálogo,
+              ou use uma das misturas rápidas para começar.
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="aviso">
+        <div class="container">
+          <div class="aviso">
+            <strong>Aviso educacional.</strong> O ChemTox Engine é um simulador didático. Os valores
+            de pH, temperatura e os indicadores clínicos são estimativas ilustrativas e não substituem
+            laudos reais. Nunca misture produtos químicos reais para testar o que aparece na tela e,
+            em caso de intoxicação, ligue para o serviço de emergência ou para o centro de
+            informação toxicológica da sua região.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">ChemTox Engine · projeto educacional</div>
+    </footer>
+  </body>
+</html>
